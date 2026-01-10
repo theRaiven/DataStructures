@@ -23,7 +23,6 @@ template <typename T>
 class List
 {
 private:
-
 	Node<T>* head;
 	Node<T>* tail;
 	size_t list_size;
@@ -56,11 +55,6 @@ public:
 			return ptr == other.ptr;
 		}
 
-		bool operator!=(const iterator& other) const
-		{
-			return ptr != other.ptr;
-		}
-
 		iterator& operator++()
 		{
 			if (ptr) ptr = ptr->next;
@@ -70,7 +64,7 @@ public:
 		{
 			iterator temp = *this;
 			++(*this);
-			return this;
+			return temp;
 		}
 		iterator& operator--()
 		{
@@ -81,7 +75,7 @@ public:
 		{
 			iterator temp = *this;
 			--(*this);
-			return this;
+			return temp;
 		}
 		bool operator!=(const iterator& other) const
 		{
@@ -93,8 +87,8 @@ private:
 	/// <summary>
 	/// Объединяет два отсортированных списка в один отсортированный результат.
 	/// </summary>
-	/// <param name="left">Входной отсортированный список (левый). Используется для чтения и не изменяется.</param>
-	/// <param name="right">Входной отсортированный список (правый). Используется для чтения и не изменяется.</param>
+	/// <param name="left">Входной отсортированный список (левый). Используется для чтения и опустошаются.</param>
+	/// <param name="right">Входной отсортированный список (правый). Используется для чтения и опустошаются.</param>
 	void merge_sort(List<T>& left, List<T>& right)
 	{
 		while (!left.empty() && !right.empty())
