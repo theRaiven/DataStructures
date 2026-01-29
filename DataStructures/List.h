@@ -1,18 +1,17 @@
 #pragma once
-#include <iostream>
 #include <initializer_list>
 /// <summary>
 /// —труктура узла Node дл€ двусв€зного списка, содержаща€ данные и указатели на следующий и предыдущий узлы.
 /// </summary>
 /// <typeparam name="T">“ип данных узла</typeparam>
 template <typename T>
-struct Node
+struct NodeList
 {
 	T data;
-	Node* next;
-	Node* prev;
-	Node(const T& value) : data(value), next(nullptr), prev(nullptr) {}
-	~Node() = default;
+	NodeList* next;
+	NodeList* prev;
+	NodeList(const T& value) : data(value), next(nullptr), prev(nullptr) {}
+	~NodeList() = default;
 };
 
 /// <summary>
@@ -23,8 +22,8 @@ template <typename T>
 class List
 {
 private:
-	Node<T>* head;
-	Node<T>* tail;
+	NodeList<T>* head;
+	NodeList<T>* tail;
 	size_t list_size;
 public: 
 	/// <summary>
@@ -36,10 +35,10 @@ public:
 	{
 		friend class List<T>;
 	private:
-		Node<T>* ptr;
+		NodeList<T>* ptr;
 	public:
 		
-		iterator(Node<T>* ptr = nullptr) : ptr(ptr) {}
+		iterator(NodeList<T>* ptr = nullptr) : ptr(ptr) {}
 		T& operator*()
 		{
 			if (!ptr) throw std::runtime_error("Dereferencing null iterator");
@@ -161,7 +160,7 @@ public:
 	/// <param name="other"> онстантна€ ссылка на список-источник, элементы которого будут скопированы.</param>
 	List(const List& other) : List()
 	{
-		for (Node<T>* current = other.head; current != nullptr; current = current->next)
+		for (NodeList<T>* current = other.head; current != nullptr; current = current->next)
 		{
 			push_back(current->data);
 		}
@@ -191,7 +190,7 @@ public:
 	/// <param name="value"> онстантна€ ссылка на значение элемента, которое будет скопировано в новый узел и добавлено в конец списка.</param>
 	void push_back(const T& value)
 	{
-		Node<T>* new_node = new Node<T>(value);
+		NodeList<T>* new_node = new NodeList<T>(value);
 		if (tail)
 		{
 			tail->next = new_node;
@@ -211,7 +210,7 @@ public:
 	/// <param name="value"> онстантна€ ссылка на значение элемента, которое будет скопировано в новый узел и добавлено в начало списка.</param>
 	void push_front(const T& value)
 	{
-		Node<T>* new_node = new Node<T>(value);
+		NodeList<T>* new_node = new NodeList<T>(value);
 		if (head)
 		{
 			new_node->next = head;
@@ -244,8 +243,8 @@ public:
 			push_front(value);
 			return iterator(head);
 		}
-		Node<T>* new_node = new Node<T>(value);
-		Node<T>* current = pos.ptr;
+		NodeList<T>* new_node = new NodeList<T>(value);
+		NodeList<T>* current = pos.ptr;
 		
 		new_node->next = current;
 		new_node->prev = current->prev;
@@ -285,8 +284,8 @@ public:
 		}
 		else
 		{
-			Node<T>* current = pos.ptr;
-			Node<T>* before = current->prev;
+			NodeList<T>* current = pos.ptr;
+			NodeList<T>* before = current->prev;
 			before->next = other.head;
 			other.head->prev = before;
 
@@ -309,7 +308,7 @@ public:
 	{
 		if (this == &other && (pos == it || pos == ++iterator(it)))
 			return;
-		Node<T>* node = it.ptr;
+		NodeList<T>* node = it.ptr;
 
 		if (node->prev)
 		{
@@ -350,8 +349,8 @@ public:
 		}
 		else
 		{
-			Node<T>* current = pos.ptr;
-			Node<T>* before = current->prev;
+			NodeList<T>* current = pos.ptr;
+			NodeList<T>* before = current->prev;
 
 			before->next = node;
 			node->prev = before;
@@ -370,7 +369,7 @@ public:
 		{
 			throw std::out_of_range("List is empty");
 		}
-		Node<T>* temp = tail;
+		NodeList<T>* temp = tail;
 		tail = tail->prev;
 		if (tail)
 		{
@@ -392,7 +391,7 @@ public:
 		{
 			throw std::out_of_range("List is empty");
 		}
-		Node<T>* temp = head;
+		NodeList<T>* temp = head;
 		head = head->next;
 		if (head)
 		{
@@ -415,8 +414,8 @@ public:
 		if (pos == end())
 			throw std::out_of_range("Cannot erase end() iterator");
 
-		Node<T>* current = pos.ptr;
-		Node<T>* next_node = current->next;
+		NodeList<T>* current = pos.ptr;
+		NodeList<T>* next_node = current->next;
 		if (current == head)
 		{
 			pop_front();
@@ -590,8 +589,8 @@ public:
 	/// </summary>
 	void reverse()
 	{
-		Node<T>* current = head;
-		Node<T>* temp = nullptr;
+		NodeList<T>* current = head;
+		NodeList<T>* temp = nullptr;
 		while (current)
 		{
 			temp = current->prev;
@@ -613,7 +612,7 @@ public:
 
 		size_t mid = list_size / 2;
 		size_t index = 0;
-		for (Node<T>* current = head; current != nullptr; current = current->next)
+		for (NodeList<T>* current = head; current != nullptr; current = current->next)
 		{
 			if (index < mid)
 			{
@@ -641,7 +640,7 @@ public:
 		if (this != &other)
 		{
 			clear();
-			for (Node<T>* current = other.head; current != nullptr; current = current->next)
+			for (NodeList<T>* current = other.head; current != nullptr; current = current->next)
 			{
 				push_back(current->data);
 			}
@@ -690,8 +689,8 @@ public:
 	{
 		if (list_size != other.list_size)
 			return false;
-		Node<T>* current = head;
-		Node<T>* other_current = other.head;
+		NodeList<T>* current = head;
+		NodeList<T>* other_current = other.head;
 		while (current && other_current)
 		{
 			if (current->data != other_current->data)
@@ -707,10 +706,10 @@ public:
 	/// </summary>
 	void clear()
 	{
-		Node<T>* current = head;
+		NodeList<T>* current = head;
 		while (current)
 		{
-			Node<T>* next_node = current->next;
+			NodeList<T>* next_node = current->next;
 			delete current;
 			current = next_node;
 		}
