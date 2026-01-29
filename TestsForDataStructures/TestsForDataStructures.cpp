@@ -1,12 +1,14 @@
 ﻿#include "pch.h"
 #include "CppUnitTest.h"
 #include "../DataStructures/List.h"
-
+#include "../DataStructures/RBTree.h"
+#include <random>
+#include <set>
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
 namespace TestsForDataStructures
 {
-	TEST_CLASS(TestsForDataStructures)
+	TEST_CLASS(TestsForList)
 	{
 	public:
 		TEST_METHOD(Sort)
@@ -210,5 +212,299 @@ namespace TestsForDataStructures
 			Assert::AreEqual(static_cast<size_t>(0), b.size());
 		}
 
+	};
+	TEST_CLASS(TestsForRBTree)
+	{
+	public:
+		TEST_METHOD(ValidateEmptyRBTree)
+		{
+			RBTree<int> tree;
+
+			Assert::AreEqual(static_cast<size_t>(0), tree.size());
+			Assert::AreEqual(true, tree.empty());
+			Assert::IsTrue(tree.begin() == tree.end());
+			Assert::IsTrue(tree.find(10) == tree.end());
+			Assert::IsTrue(tree.lower_bound(10) == tree.end());
+			Assert::IsTrue(tree.upper_bound(10) == tree.end());
+			Assert::AreEqual(tree.validate(), true);
+
+		}
+		TEST_METHOD(ValidateRBTreeWithOneElem)
+		{
+			RBTree<int> tree;
+			tree.insert(5);
+
+			Assert::AreEqual(static_cast<size_t>(1), tree.size());
+			Assert::AreEqual(false, tree.empty());
+			Assert::AreEqual(*tree.begin(), 5);
+			Assert::IsTrue(++tree.begin() == tree.end());
+			Assert::IsTrue(--tree.end() == tree.begin());
+			Assert::IsTrue(tree.find(5) != tree.end());
+			Assert::IsTrue(tree.find(4) == tree.end());
+			Assert::AreEqual(tree.validate(), true);
+
+		}
+		TEST_METHOD(ValidateInsertionIsSequential)
+		{
+			RBTree<int> tree;
+			for (int i = 1; i <= 1000; ++i)
+			{
+				tree.insert(i);
+			}
+			Assert::AreEqual(static_cast<size_t>(1000), tree.size());
+			Assert::AreEqual(tree.validate(), true);
+
+			int i=1;
+			for (auto t : tree)
+			{
+				Assert::AreEqual(t, i++);
+			}
+		
+		}
+		TEST_METHOD(ValidateReverseInsertionIsSequential)
+		{
+			RBTree<int> tree;
+			for (int i = 1000; i >= 1; --i)
+			{
+				tree.insert(i);
+			}
+			Assert::AreEqual(static_cast<size_t>(1000), tree.size());
+			Assert::AreEqual(tree.validate(), true);
+
+			int i = 1;
+			for (auto t : tree)
+			{
+				Assert::AreEqual(t, i++);
+			}
+		}
+		TEST_METHOD(ValidateRandomInsertionIsSequential)
+		{
+			RBTree<int> tree;
+			std::mt19937 gen(42);
+			for (int i = 0; i < 10'000; ++i)
+			{
+				tree.insert(gen());
+			}
+			Assert::AreEqual(static_cast<size_t>(10000), tree.size());
+			Assert::AreEqual(tree.validate(), true);
+		}
+		TEST_METHOD(In_orderTraversal)
+		{
+			RBTree<int> tree;
+			for (int i = 1000; i >= 1; --i)
+			{
+				tree.insert(i);
+			}
+			Assert::AreEqual(static_cast<size_t>(1000), tree.size());
+			Assert::AreEqual(tree.validate(), true);
+			std::vector<int> v;
+			for (auto x : tree)
+			{
+				v.push_back(x);
+			}
+			Assert::AreEqual(true, std::is_sorted(v.begin(), v.end()));
+			Assert::AreEqual(v.size(), tree.size());
+		}
+		TEST_METHOD(CorrectIteratorTravel)
+		{
+			RBTree<int> tree;
+			for (int i = 1000; i >= 1; --i)
+			{
+				tree.insert(i);
+			}
+			auto it = tree.find(10);
+			auto next = it;
+			++next;
+			tree.erase(it);
+			Assert::AreEqual(*tree.find(*next), *next);
+			
+			it = tree.begin();
+			auto prev = it++;
+			Assert::AreEqual(*prev, 1);
+			it = tree.end();
+			--it;
+			Assert::AreEqual(*it, 1000);
+		}
+		TEST_METHOD(EraseSheet)
+		{
+			RBTree<int> tree;
+
+			tree.insert(10);
+			tree.insert(9);
+			tree.insert(8);
+
+			Assert::AreEqual(tree.validate(), true);
+
+			tree.erase(8);
+			
+			Assert::AreEqual(tree.validate(), true);
+		}
+		TEST_METHOD(EraseNodeWithOneChild)
+		{
+			RBTree<int> tree;
+
+			for (int i = 10; i > 0; i--)
+			{
+				tree.insert(i);
+			}
+			Assert::AreEqual(tree.validate(), true);
+
+			tree.erase(2);
+
+			Assert::AreEqual(tree.validate(), true);
+		}
+		TEST_METHOD(EraseNodeWithTwoChild)
+		{
+			RBTree<int> tree;
+
+			for (int i = 10; i > 0; i--)
+			{
+				tree.insert(i);
+			}
+			Assert::AreEqual(tree.validate(), true);
+
+			tree.erase(5);
+
+			Assert::AreEqual(tree.validate(), true);
+		}
+		TEST_METHOD(EraseFirstNode)
+		{
+			RBTree<int> tree;
+
+			for (int i = 10; i > 0; i--)
+			{
+				tree.insert(i);
+			}
+			tree.erase(*tree.begin());
+
+			Assert::AreEqual(tree.validate(), true);
+		}
+		TEST_METHOD(EraseList)
+		{
+			RBTree<int> tree;
+
+			for (int i = 10; i > 0; i--)
+			{
+				tree.insert(i);
+			}
+			std::vector<int> keys{ 1,2,3,4,5 };
+
+			for (int k : keys)
+			{
+				tree.erase(k);
+				Assert::AreEqual(tree.validate(), true);
+			}
+		}
+		TEST_METHOD(EraseAll)
+		{
+			RBTree<int> tree;
+			for (int i = 1; i <= 1000; ++i) tree.insert(i);
+			for (int i = 1; i <= 1000; ++i)
+			{
+				tree.erase(i);
+				Assert::IsTrue(tree.validate());
+			}
+			Assert::IsTrue(tree.empty());
+		}
+		TEST_METHOD(RandomInsertRandomErase)
+		{
+			RBTree<int> tree;
+			std::mt19937 gen(42);
+			std::vector<int> keys;
+
+			for (int i = 0; i < 5000; ++i)
+			{
+				int v = gen();
+				keys.push_back(v);
+				tree.insert(v);
+			}
+			std::shuffle(keys.begin(), keys.end(), gen);
+
+			for (int v : keys)
+			{
+				tree.erase(v);
+				Assert::IsTrue(tree.validate());
+			}
+		}
+		TEST_METHOD(LowerUpperEqual)
+		{
+			RBTree<int> tree;
+
+			for (int i = 1000; i > 0; i--)
+			{
+				tree.insert(i);
+			}
+			Assert::AreEqual(*tree.upper_bound(10), 11);
+			Assert::AreEqual(tree.lower_bound(99).operator*(), 99);
+			Assert::IsTrue(tree.upper_bound(1000) == tree.end());
+		
+			auto range = tree.equal_range(10);
+
+			Assert::IsTrue(tree.lower_bound(10) == range.first);
+			Assert::IsTrue(tree.upper_bound(10) == range.second);
+		}
+		TEST_METHOD(CopyTree)
+		{
+			RBTree<int> tree;
+
+			for (int i = 1000; i > 0; i--)
+			{
+				tree.insert(i);
+			}
+		
+			auto copy_tree = tree;
+
+			Assert::AreEqual(copy_tree.size(), tree.size());
+			auto it_copy = copy_tree.begin();
+			for (auto it_original : tree)
+			{
+				Assert::IsTrue(*it_copy == it_original);
+				++it_copy;
+			}
+		}
+		TEST_METHOD(MoveTree)
+		{
+			RBTree<int> tree;
+
+			for (int i = 1000; i > 0; i--)
+			{
+				tree.insert(i);
+			}
+			RBTree<int> a = std::move(tree);
+			
+			Assert::AreEqual(tree.empty(), true);
+			Assert::AreEqual(a.validate(), true);
+		}
+		TEST_METHOD(SelfCopy)
+		{
+			RBTree<int> tree;
+
+			for (int i = 1000; i > 0; i--)
+			{
+				tree.insert(i);
+			}
+			 tree = tree;
+
+			Assert::AreEqual(tree.validate(), true);
+		}
+		TEST_METHOD(SetComparison)
+		{
+			RBTree<int> my;
+			std::set<int> st;
+
+			for (int i = 1000; i > 0; i--)
+			{
+				my.insert(i);
+				st.insert(i);
+			}
+
+			Assert::AreEqual(st.size(), my.size());
+			auto it_st = st.begin();
+			for (auto it_my : my)
+			{
+				Assert::IsTrue(*it_st == it_my);
+				++it_st;
+			}
+		}
 	};
 }
