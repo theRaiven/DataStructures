@@ -29,5 +29,8 @@
     <ClInclude Include="BenchmarkDSAndSTL.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
+    <ClInclude Include="..\TestsForDataStructures\HeshTables.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

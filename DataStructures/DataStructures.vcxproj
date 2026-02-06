@@ -132,6 +132,7 @@
     <ClCompile Include="DataStructures.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\TestsForDataStructures\HeshTables.h" />
     <ClInclude Include="BenchmarkDSAndSTL.h" />
     <ClInclude Include="List.h" />
     <ClInclude Include="RBTree.h" />

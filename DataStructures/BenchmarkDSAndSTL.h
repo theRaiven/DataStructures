@@ -409,3 +409,181 @@ private:
 		cout << "  std::set= " << stl << " ms\n\n";
 	}
 };
+
+template<typename MyHashTable, typename StdMap>
+class MapBenchmark
+{
+private:
+	size_t n_;
+public:
+	explicit MapBenchmark(size_t n) : n_(n) {}
+
+	void run_all()
+	{
+		run("emplace",
+			[&] { return emplace<MyHashTable>(n_); },
+			[&] { return emplace<StdMap>(n_); });
+
+		run("duplicate_emplace",
+			[&] { return duplicate_emplace<MyHashTable>(n_); },
+			[&] { return duplicate_emplace<StdMap>(n_); });
+
+		run("erase",
+			[&] { return erase<MyHashTable>(n_); },
+			[&] { return erase<StdMap>(n_); });
+
+		run("erase_random",
+			[&] { return erase_random<MyHashTable>(n_); },
+			[&] { return erase_random<StdMap>(n_); });
+
+		run("clear",
+			[&] { return clear<MyHashTable>(n_); },
+			[&] { return clear<StdMap>(n_); });
+
+		run("iteration",
+			[&] { return iteration<MyHashTable>(n_); },
+			[&] { return iteration<StdMap>(n_); });
+	}
+
+private:
+	template<typename F1, typename F2>
+	void run(const string& name, F1 my, F2 stl)
+	{
+		long long my_time = my();
+		long long stl_time = stl();
+		print(name, my_time, stl_time);
+	}
+
+	template<typename Func>
+	long long benchmark(Func f)
+	{
+		auto start = Clock::now();
+		f();
+		auto end = Clock::now();
+		return std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+	}
+
+	template<typename MapType>
+	long long emplace(size_t n)
+	{
+		MapType map;
+
+		return benchmark([&]()
+			{
+				for (size_t i = 0; i < n; ++i)
+				{
+					map.emplace(i, i);
+				}
+			});
+	}
+
+	template<typename MapType>
+	long long duplicate_emplace(size_t n)
+	{
+		MapType map;
+		for (size_t i = 0; i < n; ++i)
+		{
+			map.emplace(i, i);
+		}
+		return benchmark([&]()
+			{
+				for (size_t i = 0; i < n; ++i)
+				{
+					map.emplace(i, i);
+				}
+			});
+	}
+
+	template<typename MapType>
+	long long erase(size_t n)
+	{
+		MapType map;
+		for (size_t i = 0; i < n; ++i)
+		{
+			map.emplace(i, i);
+		}
+
+		return benchmark([&]()
+			{
+				int i = 0;
+				for (size_t i = 0; i < n; ++i)
+					map.erase(i);
+			});
+	}
+
+	template<typename MapType>
+	long long erase_random(size_t n)
+	{
+		MapType map;
+		std::vector<int> keys(n);
+
+		for (size_t i = 0; i < n; ++i)
+		{
+			keys[i] = i;
+			map.emplace(i, i);
+		}
+
+		std::mt19937 gen(42);
+		std::shuffle(keys.begin(), keys.end(), gen);
+
+		return benchmark([&]
+			{
+				for (int k : keys)
+				{
+					map.erase(k);
+				}
+			});
+	}
+
+	template<typename MapType>
+	long long clear(size_t n)
+	{
+		MapType map;
+		for (size_t i = 0; i < n; ++i)
+			map.emplace(i, i);
+
+		return benchmark([&]()
+			{
+				map.clear();
+			});
+	}
+
+	template<typename MapType>
+	long long iteration(size_t n)
+	{
+		MapType map;
+		for (size_t i = 0; i < n; ++i)
+			map.emplace(i, i);
+
+		volatile size_t sum = 0;
+
+		return benchmark([&]
+			{
+				for (auto& [k, v] : map)
+					sum += k;
+			});
+	}
+
+	template<typename MapType>
+	long long lower_upper(size_t n)
+	{
+		MapType map;
+		for (size_t i = 0; i < n; ++i)
+			map.emplace(i,i);
+		return benchmark([&]()
+			{
+				for (size_t i = 0; i < n; ++i)
+				{
+					map.lower_bound(i);
+					map.upper_bound(i);
+				}
+			});
+	}
+
+	void print(const string name, long long my, long long stl)
+	{
+		cout << name << ":\n";
+		cout << "  MyHashTable                   = " << my << " ms\n";
+		cout << "  std::unordered_map / std::map = " << stl << " ms\n\n";
+	}
+};
