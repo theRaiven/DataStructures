@@ -91,7 +91,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpp20</LanguageStandard>
+      <LanguageStandard>stdcpp23</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -129,11 +129,18 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Containers\Vector\VectorIterators.h" />
     <ClCompile Include="DataStructures.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\TestsForDataStructures\HeshTables.h" />
-    <ClInclude Include="BenchmarkDSAndSTL.h" />
+    <ClInclude Include="Benchmark\BenchmarkDSAndSTL.h" />
+    <ClInclude Include="Containers\HashMap\HashTableIterator.h" />
+    <ClInclude Include="Containers\HashMap\IHashTable.h" />
+    <ClInclude Include="Containers\List\ListIterator.h" />
+    <ClInclude Include="Containers\List\ListNode.h" />
+    <ClInclude Include="Containers\RBTree\RBTIterators.h" />
+    <ClInclude Include="Containers\RBTree\RBTNode.h" />
     <ClInclude Include="List.h" />
     <ClInclude Include="RBTree.h" />
   </ItemGroup>

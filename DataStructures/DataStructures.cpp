@@ -2,34 +2,31 @@
 //
 
 #include <iostream>
-#include "List.h"
-#include "RBTree.h"
-#include "BenchmarkDSAndSTL.h"
-#include "HeshTables.h"
+#include "Containers/List/List.h"
+#include "Containers/Vector/Vector.h"
+#include "Containers/RBTree/RBTree.h"
+#include "Benchmark/BenchmarkDSAndSTL.h"
+#include "Containers/HashMap/HashMap.h"
 #include <unordered_map>
 #include <list>
+#include <vector>
 #include <set>
 #include <chrono>
 using namespace std;
 
 int main()
 {
-	/*ListBenchmark<List<int>, std::list<int>> ListBench(1'000'000);
-	ListBench.run_all();*/
+	VectorBenchmark<Vector<int>, std::vector<int>> vectorBenchmark(100000);
+	vectorBenchmark.run_all();
 
-	MapBenchmark<HashMapChaining<int, int>, std::unordered_map<int, int>> RBTBench(1'000'000);
-	RBTBench.run_all();
+	ListBenchmark<List<int>, std::list<int>> listBenchmark(100000);
+	listBenchmark.run_all();
 
-	unordered_map<int, int> mymap;
-	/*List<int> mylist{ 5,4,3,2,1 };
-	cout << "Before sort:\n";
-	for (auto v : mylist)
-		cout << v << " ";
-	cout << "\nAfter sort:\n";
-	mylist.sort();
+	RBTreeBenchmark<RBTree<int>, std::set<int>> rbTreeBenchmark(100000);
+	rbTreeBenchmark.run_all();
 
-	for(auto v : mylist)
-		cout << v << " ";*/
+	MapBenchmark<HashMapChaining<int, int>, std::unordered_map<int, int>> mapBenchmark(100000);
+	mapBenchmark.run_all();
 
 	return 0;
 }

@@ -1,18 +1,7 @@
 #pragma once
 #include <initializer_list>
-/// <summary>
-/// Структура узла Node для двусвязного списка, содержащая данные и указатели на следующий и предыдущий узлы.
-/// </summary>
-/// <typeparam name="T">Тип данных узла</typeparam>
-template <typename T>
-struct NodeList
-{
-	T data;
-	NodeList* next;
-	NodeList* prev;
-	NodeList(const T& value) : data(value), next(nullptr), prev(nullptr) {}
-	~NodeList() = default;
-};
+#include "ListIterator.h"
+#include "ListNode.h"
 
 /// <summary>
 /// Класс двусвязного списка List, реализующий основные операции вставки, удаления, доступа и сортировки элементов.
@@ -25,64 +14,9 @@ private:
 	NodeList<T>* head;
 	NodeList<T>* tail;
 	size_t list_size;
-public: 
-	/// <summary>
-	/// Двунаправленный итератор для контейнера List.
-	/// Позволяет последовательно перемещаться по элементам списка
-	/// и получать доступ к хранимым данным.
-	/// </summary>
-	class iterator
-	{
-		friend class List<T>;
-	private:
-		NodeList<T>* ptr;
-	public:
-		
-		iterator(NodeList<T>* ptr = nullptr) : ptr(ptr) {}
-		T& operator*()
-		{
-			if (!ptr) throw std::runtime_error("Dereferencing null iterator");
-			return ptr->data;
-		}
-		const T& operator*() const 
-		{
-			if (!ptr) throw std::runtime_error("Dereferencing null iterator"); 
-			return ptr->data;
-		}
-		bool operator==(const iterator& other) const
-		{
-			return ptr == other.ptr;
-		}
 
-		iterator& operator++()
-		{
-			if (ptr) ptr = ptr->next;
-			return *this;
-		}
-		iterator& operator++(int)
-		{
-			iterator temp = *this;
-			++(*this);
-			return temp;
-		}
-		iterator& operator--()
-		{
-			if (ptr) ptr = ptr->prev;
-			return *this;
-		}
-		iterator& operator--(int count)
-		{
-			iterator temp = *this;
-			--(*this);
-			return temp;
-		}
-		bool operator!=(const iterator& other) const
-		{
-			return ptr != other.ptr;
-		}
+	using iterator = ListIterator<T>;
 
-	};
-private: 
 	/// <summary>
 	/// Объединяет два отсортированных списка в один отсортированный результат.
 	/// </summary>

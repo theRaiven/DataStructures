@@ -3,41 +3,10 @@
 #include <utility>
 #include <cmath>
 #include <stdexcept>
+#include "IHashTable.h"
+#include "HashTableIterator.h"
 // добавлю еще таблицу
-/// <summary>
-/// Интерфейс хеш-таблицы с основными операциями вставки, удаления, поиска и получения размера.
-/// </summary>
-/// <typeparam name="Key">Тип передаваемого ключа</typeparam>
-/// <typeparam name="Value">Тип значение по ключу</typeparam>
-template<class Key, class Value>
-class IHashTable
-{
-public:
-	/// <summary>
-	/// метод для вставки пары ключ-значение в хеш-таблицу.
-	/// </summary>
-	/// <param name="key">Ключ для вставки в хеш-таблицу.</param>
-	/// <param name="value">Значние для вставки по ключу</param>
-	virtual void emplace(const Key& key, const Value& value) = 0;
-	/// <summary>
-	/// метод для удаления элемента по ключу из хеш-таблицы. находит элемент с заданным ключом и удаляет его из таблицы.
-	/// </summary>
-	/// <param name="key">Ключ для удаленияизв хеш-таблицы.</param>
-	/// <returns>true - если элемент удален. false - если элемента не существовало</returns>
-	virtual bool erase(const Key& key) = 0;
-	/// <summary>
-	/// Метод для поиска значения по ключу в хеш-таблице.
-	/// </summary>
-	/// <param name="key"> Ключ для поиска в хеш-таблице.</param>
-	/// <param name="value"> Ссылка на переменную, в которую будет записано найденное значение, если ключ существует в таблице. </param>
-	/// <returns></returns>
-	virtual bool find(const Key& key, Value& value) const = 0;
-	/// <summary>
-	/// метод для получения количества элементов в хеш-таблице.
-	/// </summary>
-	/// <returns> Возаращает количество элементов в хеш-таблице типа size_t. </returns>
-	virtual size_t size() const = 0;
-};
+
 
 /// <summary>
 /// Класс хеш-таблицы с цепочками для разрешения коллизий.
@@ -50,6 +19,10 @@ template<class Key,	class Value, class Hash = std::hash<Key>, class KeyEqual = s
 class HashMapChaining : public IHashTable<Key, Value>
 {
 	using Bucket = std::vector<std::pair<Key, Value>>;
+	using iterator = HashTableIterator<Key, Value, Hash, KeyEqual>;
+
+	friend class HashTableIterator<Key, Value, Hash, KeyEqual>;
+
 private:
 	std::vector<Bucket> buckets_;
 	size_t size_ = 0;
@@ -59,126 +32,7 @@ private:
 
 	float max_load_factor_ = 1.0f;
 public:
-	/// <summary>
-	/// Итератор для хеш-таблицы с цепочками.
-	/// </summary>
-	class iterator
-	{
-		friend class HashMapChaining;
-	private:
-		HashMapChaining* map_ = nullptr;
-		size_t bucket_idx_ = 0;
-		size_t elem_idx_ = 0;
-
-		void skip_empty()
-		{
-			while (bucket_idx_ < map_->buckets_.size() &&
-				map_->buckets_[bucket_idx_].empty())
-			{
-				++bucket_idx_;
-				elem_idx_ = 0;
-			}
-		}
-	public:
-		iterator() = default;
-		iterator(HashMapChaining* map, size_t b, size_t e) : map_(map), bucket_idx_(b), elem_idx_(e)
-		{
-			if (map_) skip_empty();
-		}
-
-		std::pair<Key, Value>& operator*()
-		{
-			if (!map_ || bucket_idx_ >= map_->buckets_.size())
-				throw std::runtime_error("Dereferencing invalid iterator");
-			return map_->buckets_[bucket_idx_][elem_idx_];
-		}
-		const std::pair<Key, Value>& operator*() const
-		{
-			if (!map_ || bucket_idx_ >= map_->buckets_.size())
-				throw std::runtime_error("Dereferencing invalid iterator");
-			return map_->buckets_[bucket_idx_][elem_idx_];
-		}
-
-		iterator& operator++()
-		{
-			if (!map_)
-				throw std::runtime_error("Invalid iterator");
-
-			if (map_->size_ == 0)
-				throw std::runtime_error("Cannot increment iterator: empty table");
-
-			++elem_idx_;
-			if (elem_idx_ >= map_->buckets_[bucket_idx_].size())
-			{
-				++bucket_idx_;
-				elem_idx_ = 0;
-				skip_empty();
-			}
-			return *this;
-		}
-		iterator operator++(int)
-		{
-			iterator tmp = *this;
-			++(*this);
-			return tmp;
-		}
-		iterator& operator--()
-		{
-			if (!map_)
-				throw std::runtime_error("Invalid iterator");
-
-			if (map_->size_ == 0)
-				throw std::runtime_error("Cannot decrement iterator: empty table");
-
-			if (*this == map_->begin())
-				throw std::runtime_error("Iterator underflow");
-
-			if (bucket_idx_ == map_->buckets_.size())
-			{
-				bucket_idx_ = map_->buckets_.size() - 1;
-				while (bucket_idx_ > 0 && map_->buckets_[bucket_idx_].empty())
-					--bucket_idx_;
-
-				elem_idx_ = map_->buckets_[bucket_idx_].size() - 1;
-				return *this;
-			}
-
-			if (elem_idx_ > 0)
-			{
-				--elem_idx_;
-			}
-			else
-			{
-				if (bucket_idx_ == 0)
-					throw std::runtime_error("Iterator underflow");
-
-				--bucket_idx_;
-				while (bucket_idx_ > 0 && map_->buckets_[bucket_idx_].empty())
-					--bucket_idx_;
-
-				elem_idx_ = map_->buckets_[bucket_idx_].size() - 1;
-			}
-
-			return *this;
-		}
-		iterator operator--(int)
-		{
-			iterator tmp = *this;
-			--(*this);
-			return tmp;
-		}
-
-		bool operator==(const iterator& other) const
-		{
-			return map_ == other.map_ &&
-				bucket_idx_ == other.bucket_idx_ &&
-				elem_idx_ == other.elem_idx_;
-		}
-		bool operator!=(const iterator& other) const
-		{
-			return !(*this == other);
-		}
-	};
+	
 	/// <summary>
 	/// Конструктор хеш-таблицы с цепочками с пользовательскими функциями хеширования и сравнения.
 	/// </summary>

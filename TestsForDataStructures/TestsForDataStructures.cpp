@@ -1,8 +1,9 @@
 ﻿#include "pch.h"
 #include "CppUnitTest.h"
-#include "../DataStructures/List.h"
-#include "../DataStructures/RBTree.h"
-#include "../DataStructures//HeshTables.h"
+#include "../DataStructures/Containers/List/List.h"
+#include "../DataStructures/Containers/RBTree/RBTree.h"
+#include "../DataStructures/Containers/Vector/Vector.h"
+#include "../DataStructures/Containers/HashMap/HashMap.h"
 #include <random>
 #include <set>
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
@@ -807,6 +808,455 @@ namespace TestsForDataStructures
 				{
 					--it;
 				});
+		}
+	};
+	TEST_CLASS(TestsForVector)
+	{
+	public:
+		TEST_METHOD(Constructur_Count_Size)
+		{
+			Vector<int> vec(5);
+
+			Assert::AreEqual(static_cast<size_t>(5), vec.size());
+			Assert::AreEqual(static_cast<size_t>(5), vec.capacity());
+		}
+		TEST_METHOD(Constructur_CountAndValue_SizeAndValue)
+		{
+			Vector<int> vec(5, 42);
+
+			Assert::AreEqual(static_cast<size_t>(5), vec.size());
+			Assert::AreEqual(static_cast<size_t>(5), vec.capacity());
+
+			for (size_t i = 0; i < 5; ++i)
+			{
+				Assert::AreEqual(42, vec[i]);
+			}
+		}
+		TEST_METHOD(Constructur_InitializerList)
+		{
+			Vector<int> vec{1, 2, 3, 4, 5};
+
+			Assert::AreEqual(static_cast<size_t>(5), vec.size());
+			Assert::AreEqual(static_cast<size_t>(5), vec.capacity());
+			
+			Assert::AreEqual(1, vec[0]);
+			Assert::AreEqual(2, vec[1]);
+			Assert::AreEqual(3, vec[2]);
+			Assert::AreEqual(4, vec[3]);
+			Assert::AreEqual(5, vec[4]);
+		}
+		TEST_METHOD(Constructur_Copy)
+		{
+			Vector<int> vec1{ 1, 2, 3 };
+			Vector<int> vec2 = vec1;
+
+			Assert::AreEqual(static_cast<size_t>(3), vec2.size());
+			Assert::AreEqual(static_cast<size_t>(3), vec2.capacity());
+
+			Assert::AreEqual(1, vec2[0]);
+			Assert::AreEqual(2, vec2[1]);
+			Assert::AreEqual(3, vec2[2]);
+		}
+		TEST_METHOD(Constructur_Move)
+		{
+			Vector<int> vec1{ 1, 2, 3 };
+			Vector<int> vec2 = std::move(vec1);
+
+			Assert::AreEqual(static_cast<size_t>(3), vec2.size());
+			Assert::AreEqual(static_cast<size_t>(3), vec2.capacity());
+
+			Assert::AreEqual(1, vec2[0]);
+			Assert::AreEqual(2, vec2[1]);
+			Assert::AreEqual(3, vec2[2]);
+		}
+		TEST_METHOD(Constructur_Range)
+		{
+			std::vector<int> stdVec{ 1, 2, 3, 4, 5 };
+			Vector<int> vec(stdVec.begin(), stdVec.end());
+
+			Assert::AreEqual(static_cast<size_t>(5), vec.size());
+			Assert::AreEqual(static_cast<size_t>(5), vec.capacity());
+
+			for (size_t i = 0; i < 5; ++i)
+			{
+				Assert::AreEqual(stdVec[i], vec[i]);
+			}
+		}
+		TEST_METHOD(Operator_Assign_Copy)
+		{
+			Vector<int> vec1{ 1, 2, 3 };
+			Vector<int> vec2;
+
+			vec2 = vec1;
+
+			Assert::AreEqual(static_cast<size_t>(3), vec2.size());
+			Assert::AreEqual(static_cast<size_t>(3), vec2.capacity());
+
+			Assert::AreEqual(1, vec2[0]);
+			Assert::AreEqual(2, vec2[1]);
+			Assert::AreEqual(3, vec2[2]);
+		}
+		TEST_METHOD(Operator_Assign_Move)
+		{
+			Vector<int> vec1{ 1, 2, 3 };
+			Vector<int> vec2;
+
+			vec2 = std::move(vec1);
+
+			Assert::AreEqual(static_cast<size_t>(3), vec2.size());
+			Assert::AreEqual(static_cast<size_t>(3), vec2.capacity());
+
+			Assert::AreEqual(1, vec2[0]);
+			Assert::AreEqual(2, vec2[1]);
+			Assert::AreEqual(3, vec2[2]);
+		}
+		TEST_METHOD(Operator_Assign_Init_list)
+		{
+			Vector<int> vec;
+			vec = { 1, 2, 3, 4, 5 };
+
+			Assert::AreEqual(static_cast<size_t>(5), vec.size());
+			Assert::AreEqual(static_cast<size_t>(5), vec.capacity());
+
+			for (size_t i = 0; i < 5; ++i)
+			{
+				Assert::AreEqual(static_cast<int>(i + 1), vec[i]);
+			}
+		}
+		TEST_METHOD(Operator_Bool_Comparison)
+		{
+			Vector<int> vec1{ 1, 2, 3 };
+			Vector<int> vec2{ 1, 2, 3 };
+			Vector<int> vec3{ 4, 5, 6 };
+
+			Assert::IsTrue(vec1 == vec2);
+			Assert::IsFalse(vec1 == vec3);
+
+			Assert::IsTrue(vec1 != vec3);
+			Assert::IsFalse(vec1 != vec2);
+		}
+		TEST_METHOD(Iterators_RangeBasedForLoop)
+		{
+			Vector<int> vec{ 1, 2, 3, 4, 5 };
+			int expected = 1;
+			for (const auto& item : vec)
+			{
+				Assert::AreEqual(expected++, item);
+			}
+		}
+		TEST_METHOD(At)
+		{
+			Vector<int> vec{ 10, 20, 30 };
+
+			Assert::AreEqual(10, vec.at(0));
+			Assert::AreEqual(20, vec.at(1));
+			Assert::AreEqual(30, vec.at(2));
+
+			Assert::ExpectException<std::out_of_range>([&vec]() { vec.at(3); });
+		}
+		TEST_METHOD(At_const)
+		{
+			const Vector<int> vec{ 10, 20, 30 };
+
+			Assert::AreEqual(10, vec.at(0));
+			Assert::AreEqual(20, vec.at(1));
+			Assert::AreEqual(30, vec.at(2));
+
+			Assert::ExpectException<std::out_of_range>([&vec]() { vec.at(3); });
+		}
+		TEST_METHOD(Front_And_Back)
+		{
+			Vector<int> vec{ 10, 20, 30 };
+
+			Assert::AreEqual(10, vec.front());
+			Assert::AreEqual(30, vec.back());
+
+			vec.front() = 100;
+			vec.back() = 300;
+
+			Assert::AreEqual(100, vec.front());
+			Assert::AreEqual(300, vec.back());
+		}
+		TEST_METHOD(Front_And_Back_const)
+		{
+			const Vector<int> vec{ 10, 20, 30 };
+
+			Assert::AreEqual(10, vec.front());
+			Assert::AreEqual(30, vec.back());
+		}
+		TEST_METHOD(Data)
+		{
+			Vector<int> vec{ 10, 20, 30 };
+
+			int* dataPtr = vec.data();
+
+			Assert::AreEqual(10, dataPtr[0]);
+			Assert::AreEqual(20, dataPtr[1]);
+			Assert::AreEqual(30, dataPtr[2]);
+
+			dataPtr[0] = 100;
+			dataPtr[1] = 200;
+			dataPtr[2] = 300;
+
+			Assert::AreEqual(100, vec[0]);
+			Assert::AreEqual(200, vec[1]);
+			Assert::AreEqual(300, vec[2]);
+		}
+		TEST_METHOD(Data_const)
+		{
+			const Vector<int> vec{ 10, 20, 30 };
+
+			const int* dataPtr = vec.data();
+
+			Assert::AreEqual(10, dataPtr[0]);
+			Assert::AreEqual(20, dataPtr[1]);
+			Assert::AreEqual(30, dataPtr[2]);
+		}
+		TEST_METHOD(EmptyVector)
+		{
+			Vector<int> vec;
+
+			Assert::AreEqual(static_cast<size_t>(0), vec.size());
+			Assert::AreEqual(static_cast<size_t>(0), vec.capacity());
+			Assert::AreEqual(true, vec.empty());
+		}
+		TEST_METHOD(Reserve)
+		{
+			Vector<int> vec;
+			vec.reserve(10);
+			Assert::AreEqual(static_cast<size_t>(0), vec.size());
+			Assert::AreEqual(static_cast<size_t>(10), vec.capacity());
+		}
+		TEST_METHOD(Resize)
+		{
+			Vector<int> vec;
+			vec.resize(5);
+			Assert::AreEqual(static_cast<size_t>(5), vec.size());
+		}
+		TEST_METHOD(ResizeWithValue)
+		{
+			Vector<int> vec;
+			vec.resize(5, 42);
+			Assert::AreEqual(static_cast<size_t>(5), vec.size());
+
+			for (size_t i = 0; i < 5; ++i)
+			{
+				Assert::AreEqual(42, vec[i]);
+			}
+		}
+		TEST_METHOD(ResizeAndReserve)
+		{
+			Vector<int> vec;
+			vec.reserve(10);
+
+			Assert::AreEqual(static_cast<size_t>(0), vec.size());
+			Assert::AreEqual(static_cast<size_t>(10), vec.capacity());
+
+			vec.resize(5);
+
+			Assert::AreEqual(static_cast<size_t>(5), vec.size());
+			Assert::AreEqual(static_cast<size_t>(10), vec.capacity());
+
+			vec.resize(15);
+
+			Assert::AreEqual(static_cast<size_t>(15), vec.size());
+			Assert::IsTrue(vec.capacity() >= 15);
+		}
+		TEST_METHOD(Clear)
+		{
+			Vector<int> vec{ 1, 2, 3 };
+			vec.clear();
+			Assert::AreEqual(static_cast<size_t>(0), vec.size());
+			Assert::AreEqual(static_cast<size_t>(3), vec.capacity());
+		}
+		TEST_METHOD(Shrink_to_fit)
+		{
+			Vector<int> vec{ 1, 2, 3 };
+			vec.reserve(100);
+			Assert::AreEqual(static_cast<size_t>(100), vec.capacity());
+			vec.shrink_to_fit();
+			Assert::AreEqual(static_cast<size_t>(3), vec.size());
+			Assert::AreEqual(static_cast<size_t>(3), vec.capacity());
+		}
+		TEST_METHOD(PushBackAndAccess)
+		{
+			Vector<int> vec;
+			vec.push_back(10);
+			vec.push_back(20);
+			vec.push_back(30);
+			Assert::AreEqual(static_cast<size_t>(3), vec.size());
+			Assert::AreEqual(10, vec[0]);
+			Assert::AreEqual(20, vec[1]);
+			Assert::AreEqual(30, vec[2]);
+		}
+		TEST_METHOD(PushBackAndAccess_move)
+		{
+			Vector<int> vec{ 10, 20, 30 };
+			
+			vec.push_back(std::move(vec[0]));
+			vec.push_back(std::move(vec[1]));
+			vec.push_back(std::move(vec[2]));
+
+			Assert::AreEqual(static_cast<size_t>(6), vec.size());
+			Assert::AreEqual(10, vec[0]);
+			Assert::AreEqual(20, vec[1]);
+			Assert::AreEqual(30, vec[2]);
+			Assert::AreEqual(10, vec[3]);
+			Assert::AreEqual(20, vec[4]);
+			Assert::AreEqual(30, vec[5]);
+
+		}
+		TEST_METHOD(PopBack)
+		{
+			Vector<int> vec{ 1, 2, 3 };
+			vec.pop_back();
+			Assert::AreEqual(static_cast<size_t>(2), vec.size());
+			Assert::AreEqual(1, vec[0]);
+			Assert::AreEqual(2, vec[1]);
+		}
+		TEST_METHOD(PopBack_EmptyVector_ShouldThrow)
+		{
+			Vector<int> vec;
+			Assert::ExpectException<std::out_of_range>([&vec]() { vec.pop_back(); });
+		}
+		TEST_METHOD(Emplace_back)
+		{
+			Vector<std::pair<int, std::string>> vec;
+
+			vec.emplace_back(1, "one");
+			vec.emplace_back(2, "two");
+
+			Assert::AreEqual(static_cast<size_t>(2), vec.size());
+
+			Assert::AreEqual(1, vec[0].first);
+			Assert::AreEqual(std::string("one"), vec[0].second);
+
+			Assert::AreEqual(2, vec[1].first);
+			Assert::AreEqual(std::string("two"), vec[1].second);
+		}
+		TEST_METHOD(Insert)
+		{
+			Vector<int> vec{ 1, 2, 3 };
+			vec.insert(vec.begin(), 42);
+
+			Assert::AreEqual(static_cast<size_t>(4), vec.size());
+
+			Assert::AreEqual(42, vec[0]);
+			Assert::AreEqual(1, vec[1]);
+			Assert::AreEqual(2, vec[2]);
+			Assert::AreEqual(3, vec[3]);
+		}
+		TEST_METHOD(Insert_SizeAndValue)
+		{
+			Vector<int> vec{ 1, 2, 3 };
+
+			vec.insert(vec.begin(), 2, 99);
+
+			Assert::AreEqual(static_cast<size_t>(5), vec.size());
+
+			Assert::AreEqual(99, vec[0]);
+			Assert::AreEqual(99, vec[1]);
+			Assert::AreEqual(1, vec[2]);
+			Assert::AreEqual(2, vec[3]);
+			Assert::AreEqual(3, vec[4]);
+		}
+		TEST_METHOD(Insert_Multiple)
+		{
+			Vector<int> vec{ 1, 2, 3 };
+			vec.insert(vec.begin(), { 10, 20, 30 });
+
+			Assert::AreEqual(static_cast<size_t>(6), vec.size());
+
+			Assert::AreEqual(10, vec[0]);
+			Assert::AreEqual(20, vec[1]);
+			Assert::AreEqual(30, vec[2]);
+			Assert::AreEqual(1, vec[3]);
+			Assert::AreEqual(2, vec[4]);
+			Assert::AreEqual(3, vec[5]);
+		}
+		TEST_METHOD(Insert_Range)
+		{
+			Vector<int> vec{ 1, 2, 3 };
+			std::vector<int> stdVec{ 10, 20, 30 };
+			vec.insert(vec.begin(), stdVec.begin(), stdVec.end());
+			Assert::AreEqual(static_cast<size_t>(6), vec.size());
+			Assert::AreEqual(10, vec[0]);
+			Assert::AreEqual(20, vec[1]);
+			Assert::AreEqual(30, vec[2]);
+			Assert::AreEqual(1, vec[3]);
+			Assert::AreEqual(2, vec[4]);
+			Assert::AreEqual(3, vec[5]);
+		}
+		TEST_METHOD(Erase)
+		{
+			Vector<int> vec{ 1, 2, 3, 4, 5 };
+
+			vec.erase(vec.begin() + 1);
+			Assert::AreEqual(static_cast<size_t>(4), vec.size());
+			Assert::AreEqual(1, vec[0]);
+			Assert::AreEqual(3, vec[1]);
+			Assert::AreEqual(4, vec[2]);
+			Assert::AreEqual(5, vec[3]);
+		}
+		TEST_METHOD(Erase_Range)
+		{
+			Vector<int> vec{ 1, 2, 3, 4, 5 };
+			vec.erase(vec.begin() + 1, vec.begin() + 4);
+
+			Assert::AreEqual(static_cast<size_t>(2), vec.size());
+			Assert::AreEqual(1, vec[0]);
+			Assert::AreEqual(5, vec[1]);
+		}
+		TEST_METHOD(Swap)
+		{
+			Vector<int> vec1{ 1, 2, 3 };
+			Vector<int> vec2{ 4, 5 };
+			vec1.swap(vec2);
+
+			Assert::AreEqual(static_cast<size_t>(2), vec1.size());
+			Assert::AreEqual(4, vec1[0]);
+			Assert::AreEqual(5, vec1[1]);
+
+			Assert::AreEqual(static_cast<size_t>(3), vec2.size());
+			Assert::AreEqual(1, vec2[0]);
+			Assert::AreEqual(2, vec2[1]);
+			Assert::AreEqual(3, vec2[2]);
+		}
+		TEST_METHOD(Assign)
+		{
+			Vector<int> vec;
+			vec.assign(3, 42);
+			Assert::AreEqual(static_cast<size_t>(3), vec.size());
+			Assert::AreEqual(42, vec[0]);
+			Assert::AreEqual(42, vec[1]);
+			Assert::AreEqual(42, vec[2]);
+		}
+		TEST_METHOD(Assign_Range)
+		{
+			Vector<int> vec;
+			std::vector<int> stdVec{ 42, 42, 42 };
+			vec.assign(stdVec.begin(), stdVec.end());
+			Assert::AreEqual(static_cast<size_t>(3), vec.size());
+			Assert::AreEqual(42, vec[0]);
+			Assert::AreEqual(42, vec[1]);
+			Assert::AreEqual(42, vec[2]);
+		}
+		TEST_METHOD(Assign_Init_list)
+		{
+			Vector<int> vec;
+			vec.assign({ 42, 42, 42 });
+			Assert::AreEqual(static_cast<size_t>(3), vec.size());
+			Assert::AreEqual(42, vec[0]);
+			Assert::AreEqual(42, vec[1]);
+			Assert::AreEqual(42, vec[2]);
+		}
+		TEST_METHOD(ResizeAndAccess)
+		{
+			Vector<int> vec;
+			vec.resize(5, 42);
+			Assert::AreEqual(static_cast<size_t>(5), vec.size());
+			for (size_t i = 0; i < 5; ++i)
+				Assert::AreEqual(42, vec[i]);
 		}
 	};
 }
