@@ -26,7 +26,7 @@ private:
 	using iterator = VectorIterator<T>;
 	using const_iterator = VectorConstIterator<T>;
 
-public: 
+public:
 	// =========================
 	// конструкторы и деструктор
 	// =========================
@@ -39,61 +39,102 @@ public:
 	/// Конструктор, инициализирующий вектор заданным количеством элементов.
 	/// </summary>
 	/// <param name="count">Количество элементов в векторе</param>
-	explicit Vector(size_t count) : v_data(v_allocator.allocate(count)), v_size(count), v_capacity(count)
+	explicit Vector(size_t count) : v_data(v_allocator.allocate(count)), v_size(0), v_capacity(count)
 	{
-		for(size_t i = 0; i < count; i++)
+		size_t built_elements = 0;
+		try
 		{
-			AllocTraits::construct(v_allocator ,&v_data[i], T());
+			for (built_elements = 0; built_elements < count; built_elements++)
+			{
+				AllocTraits::construct(v_allocator, v_data + built_elements);
+			}
 		}
+		catch (...)
+		{
+			destroy_elements(built_elements);
+			deallocate_data();
+
+			throw;
+		}
+
+		v_size = count;
 	}
 	/// <summary>
 	/// Конструктор, инициализирующий вектор заданным количеством элементов и значением.
 	/// </summary>
 	/// <param name="count">Количество элементов в векторе</param>
 	/// <param name="value">Значение для инициализации элементов</param>
-	explicit Vector(size_t count, const T& value) : v_data(v_allocator.allocate(count)), v_size(count), v_capacity(count)
+	explicit Vector(size_t count, const T& value) : v_data(v_allocator.allocate(count)), v_size(0), v_capacity(count)
 	{
-		for (size_t i = 0; i < count; i++)
+		size_t built_elements = 0;
+
+		try
 		{
-			AllocTraits::construct(v_allocator, &v_data[i], value);
+			for (built_elements = 0; built_elements < count; built_elements++)
+			{
+				AllocTraits::construct(v_allocator, v_data + built_elements, value);
+			}
 		}
+		catch (...)
+		{
+			destroy_elements(built_elements);
+			deallocate_data();
+
+			throw;
+		}
+
+		v_size = count;
 	}
 	/// <summary>
 	/// Конструктор, инициализирующий вектор с помощью списка инициализации.
 	/// </summary>
 	/// <param name="init_lis">Список инициализации</param>
-	Vector(std::initializer_list<T> init_lis) : v_data(v_allocator.allocate(init_lis.size())), v_size(init_lis.size()), v_capacity(init_lis.size())
+	Vector(std::initializer_list<T> init_lis) : v_data(v_allocator.allocate(init_lis.size())), v_size(0), v_capacity(init_lis.size())
 	{
-		size_t i = 0;
-		for (auto& item : init_lis)
+		size_t built_elements = 0;
+
+		try
 		{
-			AllocTraits::construct(v_allocator, &v_data[i++], item);
+			for (const auto& item : init_lis)
+			{
+				AllocTraits::construct(v_allocator, v_data + built_elements, item);
+				built_elements++;
+			}
 		}
+		catch (...)
+		{
+			destroy_elements(built_elements);
+			deallocate_data();
+
+			throw;
+		}
+
+		v_size = init_lis.size();
 	}
 	/// <summary>
 	/// Конструктор копирования.
 	/// </summary>
 	/// <param name="other">Другой вектор, из которого происходит копирование</param>
-	Vector(const Vector& other) : v_data(v_allocator.allocate(other.v_capacity)), v_size(other.v_size), v_capacity(other.v_capacity)
+	Vector(const Vector& other) : v_data(v_allocator.allocate(other.v_capacity)), v_size(0), v_capacity(other.v_capacity)
 	{
-		size_t costructed = 0;
+		size_t constructed = 0;
+
 		try
 		{
-			for (; costructed < other.v_size; costructed++)
+			for (; constructed < other.v_size; ++constructed)
 			{
-				AllocTraits::construct(v_allocator, &v_data[costructed], other.v_data[costructed]);
+				AllocTraits::construct(v_allocator, v_data + constructed, other.v_data[constructed]);
 			}
 		}
 		catch (...)
 		{
-			while (costructed > 0)
-			{
-				--costructed;
-				AllocTraits::destroy(v_allocator, &v_data[costructed]);
-			}
+			destroy_elements(constructed);
 			deallocate_data();
+
 			throw;
 		}
+
+		v_size = other.v_size;
 	}
 	/// <summary>
 	/// Конструктор перемещения.
@@ -123,9 +164,20 @@ public:
 		v_size = 0;
 		v_capacity = count;
 
-		for (auto it = first; it != last; ++it)
+		try
 		{
-			AllocTraits::construct(v_allocator, &v_data[v_size++], *it);
+			for (auto it = first; it != last; ++it)
+			{
+				AllocTraits::construct(v_allocator, &v_data[v_size], *it);
+				++v_size;
+			}
+		}
+		catch (...)
+		{
+			destroy_elements(v_size);
+			deallocate_data();
+
+			throw;
 		}
 	}
 
@@ -142,40 +194,49 @@ private:
 		return count;
 	}
 
+
 	void destroy_elements()
 	{
-		destroy_elements(v_size, v_data);
+		destroy_elements(v_data, v_size);
 	}
 	void destroy_elements(size_t count)
 	{
-		destroy_elements(count, v_data);
+		destroy_elements(v_data, count);
 	}
-	void destroy_elements(size_t count, T* vec)
+	void destroy_elements(T* vec, size_t count)
 	{
 		for (size_t i = count; i > 0; --i)
 		{
 			AllocTraits::destroy(v_allocator, &vec[i - 1]);
 		}
 	}
-	void destroy_range(size_t first, size_t last)
+	void destroy_range(T* data, size_t first, size_t last)
 	{
-		for (size_t i = first; i < last; ++i)
+		while (last > first)
 		{
-			AllocTraits::destroy(v_allocator, &v_data[i]);
+			--last;
+			AllocTraits::destroy(v_allocator, data + last);
 		}
 	}
-	
-	void deallocate_data()
+	void destroy_range(size_t first, size_t last)
+	{
+		destroy_range(v_data, first, last);
+	}
+
+
+	void deallocate_data() noexcept
 	{
 		deallocate_data(v_data, v_capacity);
 	}
-	void deallocate_data(T* data, size_t capacity)
+	void deallocate_data(T*& data, size_t& capacity) noexcept
 	{
 		if (data)
 		{
 			v_allocator.deallocate(data, capacity);
 			data = nullptr;
+			capacity = 0;
 		}
+
 	}
 public:
 	/// <summary>
@@ -231,17 +292,9 @@ public:
 	/// <returns> Ссылка на текущий объект Vector.</returns>
 	Vector& operator=(std::initializer_list<T> init_list)
 	{
-		destroy_elements();
-		deallocate_data();
+		Vector temp(init_list);
+		swap(temp);
 
-		v_data = v_allocator.allocate(init_list.size());
-		v_size = 0;
-		v_capacity = init_list.size();
-
-		for (const auto& item : init_list)
-		{
-			AllocTraits::construct(v_allocator, &v_data[v_size++], item);
-		}
 		return *this;
 	}
 	/// <summary>
@@ -426,7 +479,7 @@ public:
 	// ====================
 	// информация о векторе 
 	// ====================
-	
+
 	/// <summary>
 	/// Проверяет, является ли вектор пустым.
 	/// </summary>
@@ -455,7 +508,7 @@ public:
 	// ==================
 	// управление памятью
 	// ==================
-	
+
 private:
 	void replace_storage(T* new_data, size_t new_capacity)
 	{
@@ -483,8 +536,78 @@ private:
 		v_data = new_data;
 		v_capacity = new_capacity;
 	}
+	
+	template <typename ConstructElement>
+	void grow_to_size(size_t new_size, ConstructElement construct_element)
+	{
+		const size_t old_size = v_size;
 
-public: 
+		// Текущей capacity достаточно.
+		if (new_size <= v_capacity)
+		{
+			size_t added = 0;
+
+			try
+			{
+				for (size_t i = old_size; i < new_size; ++i)
+				{
+					construct_element(v_data + i);
+					++added;
+				}
+			}
+			catch (...)
+			{
+				destroy_range(old_size, old_size + added);
+				throw;
+			}
+
+			v_size = new_size;
+			return;
+		}
+
+		// Требуется новое хранилище.
+		size_t new_capacity = std::max(
+			v_capacity == 0 ? size_t{ 1 } : v_capacity * 2,
+			new_size);
+
+		T* new_data = v_allocator.allocate(new_capacity);
+
+		size_t added = 0;
+		size_t relocated = 0;
+
+		try
+		{
+			// Сначала создаём добавляемые элементы.
+			for (size_t i = old_size; i < new_size; ++i)
+			{
+				construct_element(new_data + i);
+				++added;
+			}
+
+			// Затем переносим старые элементы.
+			for (; relocated < old_size; ++relocated)
+			{
+				AllocTraits::construct(v_allocator,	new_data + relocated, std::move_if_noexcept(v_data[relocated]));
+			}
+		}
+		catch (...)
+		{
+			destroy_elements(new_data, relocated);
+
+			destroy_range(new_data,old_size,old_size + added);
+
+			deallocate_data(new_data, new_capacity);
+			throw;
+		}
+
+		destroy_elements();
+		deallocate_data();
+
+		v_data = new_data;
+		v_size = new_size;
+		v_capacity = new_capacity;
+	}
+public:
 
 	/// <summary>
 	/// Резервирует место для элементов в векторе.
@@ -495,7 +618,7 @@ public:
 		if (new_capacity > v_capacity)
 		{
 			T* new_data = v_allocator.allocate(new_capacity);
-			
+
 			replace_storage(new_data, new_capacity);
 		}
 	}
@@ -505,26 +628,24 @@ public:
 	/// <param name="new_size">Новое количество элементов</param>
 	void resize(size_t new_size)
 	{
-		if (new_size > v_capacity)
+		if (new_size < v_size)
 		{
-			reserve(new_size);
-		}
-		if (new_size > v_size)
-		{
-			for (size_t i = v_size; i < new_size; ++i)
-			{
-				AllocTraits::construct(v_allocator, &v_data[i], T());
-			}
+			destroy_range(new_size, v_size);
 			v_size = new_size;
+			return;
 		}
-		else
+
+		if (new_size == v_size)
 		{
-			for (size_t i = new_size; i < v_size; ++i)
-			{
-				AllocTraits::destroy(v_allocator, &v_data[i]);
-			}
-			v_size = new_size;
+			return;
 		}
+
+		grow_to_size(
+			new_size,
+			[this](T* address)
+			{
+				AllocTraits::construct(v_allocator, address);
+			});
 	}
 	/// <summary>
 	/// Изменяет количество элементов в векторе, заполняя новые элементы заданным значением.
@@ -533,26 +654,24 @@ public:
 	/// <param name="value">Значение для новых элементов</param>
 	void resize(size_t new_size, const T& value)
 	{
-		if (new_size > v_capacity)
+		if (new_size < v_size)
 		{
-			reserve(new_size);
-		}
-		if (new_size > v_size)
-		{
-			for (size_t i = v_size; i < new_size; i++)
-			{
-				AllocTraits::construct(v_allocator, &v_data[i], value);
-			}
+			destroy_range(new_size, v_size);
 			v_size = new_size;
+			return;
 		}
-		else
+
+		if (new_size == v_size)
 		{
-			for (size_t i = new_size; i < v_size; i++)
-			{
-				AllocTraits::destroy(v_allocator, &v_data[i]);
-			}
-			v_size = new_size;
+			return;
 		}
+
+		grow_to_size(
+			new_size,
+			[this, &value](T* address)
+			{
+				AllocTraits::construct(v_allocator,	address, value);
+			});
 	}
 	/// <summary>
 	/// Очищает вектор
@@ -574,9 +693,7 @@ public:
 
 		if (v_size == 0)
 		{
-			v_allocator.deallocate(v_data, v_capacity);
-			v_data = nullptr;
-			v_capacity = 0;
+			deallocate_data();
 			return;
 		}
 
@@ -589,21 +706,6 @@ public:
 	// изменение содержимого вектора
 	// =============================
 private:
-	void ensure_capacity()
-	{
-		if (v_size == v_capacity)
-		{
-			if (v_capacity == 0)
-			{
-				reserve(1);
-			}
-			else
-			{
-				reserve(v_capacity * 2);
-			}
-		}
-	}
-
 	void check_iterator(iterator pos)
 	{
 		if (!v_data)
@@ -626,10 +728,7 @@ public:
 	/// <param name="value">Добавляемый элемент</param>
 	void push_back(const T& value)
 	{
-		ensure_capacity();
-
-		AllocTraits::construct(v_allocator, &v_data[v_size], value); // move не нужен, так как value - это const ссылка, и все равно будет lvalue
-		v_size++;
+		emplace_back(value); // вместо десятка строк ручной реализации
 	}
 	/// <summary>
 	/// Добавляет элемент в конец вектора, используя перемещение.
@@ -637,9 +736,7 @@ public:
 	/// <param name="value">Добавляемый элемент</param>
 	void push_back(T&& value)
 	{
-		ensure_capacity();
-		AllocTraits::construct(v_allocator, &v_data[v_size], std::move(value)); // value - lvalue, а мы хотим переместить
-		v_size++;
+		emplace_back(std::move(value));
 	}
 	/// <summary>
 	/// Конструирует элемент типа T непосредственно в конце вектора,
@@ -654,9 +751,56 @@ public:
 	template <typename... Args>
 	void emplace_back(Args&&... args)
 	{
-		ensure_capacity();
-		AllocTraits::construct(v_allocator, &v_data[v_size], std::forward<Args>(args)...); // буквально так, как внутри construct
-		v_size++;
+		if (v_size < v_capacity)
+		{
+			AllocTraits::construct(
+				v_allocator,
+				v_data + v_size,
+				std::forward<Args>(args)...);
+
+			++v_size;
+			return;
+		}
+
+		size_t new_capacity = v_capacity == 0
+			? 1
+			: v_capacity * 2;
+
+		T* new_data = v_allocator.allocate(new_capacity);
+
+		size_t relocated = 0;
+		bool new_element_constructed = false;
+
+		try
+		{
+			AllocTraits::construct(v_allocator, &new_data[v_size], std::forward<Args>(args)...); // буквально так, как внутри construct
+
+			new_element_constructed = true;
+
+			for (; relocated < v_size; ++relocated)
+			{
+				AllocTraits::construct(v_allocator, new_data + relocated, std::move_if_noexcept(v_data[relocated]));
+			}
+		}
+		catch (...)
+		{
+			destroy_elements(new_data, relocated);
+
+			if (new_element_constructed)
+			{
+				AllocTraits::destroy(v_allocator, new_data + v_size);
+			}
+
+			deallocate_data(new_data, new_capacity);
+			throw;
+		}
+
+		destroy_elements();
+		deallocate_data();
+
+		v_data = new_data;
+		v_capacity = new_capacity;
+		++v_size;
 	}
 	/// <summary>
 	/// Удаляет последний элемент из вектора.
@@ -678,37 +822,58 @@ public:
 	/// <returns>Итератор, указывающий на вставленный элемент</returns>
 	iterator insert(iterator pos, const T& value)
 	{
-		// NOTE:
-		// Текущая реализация корректна для большинства типов,
-		// однако не обеспечивает strong exception guarantee,
-		// если перемещение или копирование T генерирует исключение.
-		
-		// TODO:
-		// 1. Обеспечить strong exception guarantee.
-		// 2. Реализовать rollback при исключении во время сдвига элементов.
-		// 3. Устранить дублирование логики между всеми перегрузками insert().
-
 		check_iterator(pos);
 
-		size_t index = pos.ptr - v_data;
+		size_t index = v_data == nullptr
+			? 0
+			: static_cast<size_t>(pos.ptr - v_data);
 
-		if (index == v_size)
+		size_t new_capacity;
+
+		if (v_size == v_capacity)
 		{
-			push_back(value);
-			return iterator(v_data + v_size - 1);
+			new_capacity = v_capacity == 0
+				? 1
+				: v_capacity * 2;
+		}
+		else
+		{
+			new_capacity = v_capacity;
 		}
 
-		ensure_capacity();
+		T* new_data = v_allocator.allocate(new_capacity);
+		size_t constructed = 0;
 
-		// задача из TODO 1:
-
-		for (size_t i = v_size; i > index; i--)
+		try
 		{
-			AllocTraits::construct(v_allocator, &v_data[i], std::move(v_data[i - 1]));
-			AllocTraits::destroy(v_allocator, &v_data[i - 1]);
+			for (size_t i = 0; i < index; ++i)
+			{
+				AllocTraits::construct(v_allocator,	new_data + constructed,	v_data[i]);
+				++constructed;
+			}
+
+			AllocTraits::construct(	v_allocator,new_data + constructed,	value);
+			++constructed;
+
+			for (size_t i = index; i < v_size; ++i)
+			{
+				AllocTraits::construct(	v_allocator,new_data + constructed,	v_data[i]);
+				++constructed;
+			}
 		}
-		AllocTraits::construct(v_allocator, &v_data[index], value);
-		v_size++;
+		catch (...)
+		{
+			destroy_elements(new_data, constructed);
+			deallocate_data(new_data, new_capacity);
+			throw;
+		}
+
+		destroy_elements();
+		deallocate_data();
+
+		v_data = new_data;
+		v_capacity = new_capacity;
+		++v_size;
 
 		return iterator(v_data + index);
 	}
@@ -728,24 +893,57 @@ public:
 			return pos;
 		}
 
-		size_t index = pos.ptr - v_data;
+		size_t index = v_data == nullptr
+			? 0
+			: static_cast<size_t>(pos.ptr - v_data);
+
+		size_t new_capacity;
 
 		if (v_size + count > v_capacity)
 		{
-			reserve(std::max(v_capacity * 2, v_size + count));
+			new_capacity = std::max(v_capacity * 2, v_size + count);
 		}
-
-		for (size_t i = v_size; i > index; --i)
+		else
 		{
-			AllocTraits::construct(v_allocator, &v_data[i + count - 1], std::move(v_data[i - 1]));
-			AllocTraits::destroy(v_allocator, &v_data[i - 1]);
+			new_capacity = v_capacity;
 		}
 
-		for (size_t i = 0; i < count; ++i)
+		T* new_data = v_allocator.allocate(new_capacity);
+		size_t constructed = 0;
+
+		try
 		{
-			AllocTraits::construct(v_allocator, &v_data[index + i], value); // 
+			for (size_t i = 0; i < index; ++i)
+			{
+				AllocTraits::construct(v_allocator,	new_data + constructed,	v_data[i]);
+				++constructed;
+			}
+
+			for (size_t i = 0; i < count; ++i)
+			{
+				AllocTraits::construct(v_allocator,	new_data + constructed,	value);
+				++constructed;
+			}
+
+			for (size_t i = index; i < v_size; ++i)
+			{
+				AllocTraits::construct(v_allocator, new_data + constructed,	v_data[i]);
+				++constructed;
+			}
+		}
+		catch (...)
+		{
+			destroy_elements(new_data, constructed);
+			deallocate_data(new_data, new_capacity);
+
+			throw;
 		}
 
+		destroy_elements();
+		deallocate_data();
+
+		v_data = new_data;
+		v_capacity = new_capacity;
 		v_size += count;
 
 		return iterator(v_data + index);
@@ -772,34 +970,68 @@ public:
 	iterator insert(iterator pos, InputIt first, InputIt last)
 	{
 		check_iterator(pos);
+		
+		size_t index = v_data == nullptr
+			? 0
+			: static_cast<size_t>(pos.ptr - v_data);
 
-		size_t index = pos.ptr - v_data;
-		size_t count = std::distance(first, last);
+		size_t count = distance(first, last);
 
 		if (count == 0)
 		{
 			return pos;
 		}
 
+		size_t new_capacity;
+
 		if (v_size + count > v_capacity)
 		{
-			reserve(std::max(v_capacity * 2, v_size + count));
+			new_capacity = std::max(v_capacity * 2, v_size + count);
+		}
+		else
+		{
+			new_capacity = v_capacity;
 		}
 
-		for (size_t i = v_size; i > index; --i)
+		T* new_data = v_allocator.allocate(new_capacity);
+		size_t constructed = 0;
+
+		try
 		{
-			AllocTraits::construct(v_allocator, &v_data[i + count - 1], std::move(v_data[i - 1]));
-			AllocTraits::destroy(v_allocator, &v_data[i - 1]);
+			for (size_t i = 0; i < index; ++i)
+			{
+				AllocTraits::construct(v_allocator, new_data + constructed, v_data[i]);
+				++constructed;
+			}
+
+			for (auto it = first; it != last; ++it)
+			{
+				AllocTraits::construct(v_allocator, new_data + constructed, *it);
+				++constructed;
+			}
+
+			for (size_t i = index; i < v_size; ++i)
+			{
+				AllocTraits::construct(v_allocator, new_data + constructed, v_data[i]);
+				++constructed;
+			}
+		}
+		catch (...)
+		{
+			destroy_elements(new_data, constructed);
+			deallocate_data(new_data, new_capacity);
+			throw;
 		}
 
-		for (auto it = first; it != last; ++it)
-		{
-			AllocTraits::construct(v_allocator, &v_data[index++], *it);
-		}
+		destroy_elements();
+		deallocate_data();
+
+		v_data = new_data;
+		v_capacity = new_capacity;
 
 		v_size += count;
 
-		return iterator(v_data + index - count);
+		return iterator(v_data + index);
 	}
 	/// <summary>
 	/// Удаляет элемент из вектора.
@@ -815,13 +1047,14 @@ public:
 
 		size_t index = pos.ptr - v_data;
 
-		for (size_t i = index; i < v_size - 1; i++)
+		for (size_t i = index; i + 1 < v_size; ++i)
 		{
-			AllocTraits::destroy(v_allocator, &v_data[i]);
-			AllocTraits::construct(v_allocator, &v_data[i], std::move(v_data[i + 1]));
+			v_data[i] = std::move(v_data[i + 1]);
 		}
-		AllocTraits::destroy(v_allocator, &v_data[v_size - 1]);
-		v_size--;
+
+		AllocTraits::destroy(v_allocator, v_data + v_size - 1);
+
+		--v_size;
 
 		return iterator(v_data + index);
 	}
@@ -846,15 +1079,13 @@ public:
 			return first;
 		}
 
-		size_t start = first.ptr - v_data;
-		size_t finish = last.ptr - v_data;
-
+		size_t start = static_cast<size_t>(first.ptr - v_data);
+		size_t finish = static_cast<size_t>(last.ptr - v_data);
 		size_t count = finish - start;
 
-		for (size_t i = finish; i < v_size; i++)
+		for (size_t i = finish; i < v_size; ++i)
 		{
-			AllocTraits::destroy(v_allocator, &v_data[i - count]);
-			AllocTraits::construct(v_allocator, &v_data[i - count], std::move(v_data[i]));
+			v_data[i - count] = std::move(v_data[i]);
 		}
 
 		destroy_range(v_size - count, v_size);
@@ -886,19 +1117,47 @@ public:
 	/// <param name="value">Значение для назначения</param>
 	void assign(size_t count, const T& value)
 	{
+		if (count == 0)
+		{
+			clear();
+			return;
+		}
+
+		size_t new_capacity;
+
 		if (count > v_capacity)
 		{
-			reserve(count);
+			new_capacity = std::max(v_capacity * 2, count);
+		}
+		else
+		{
+			new_capacity = v_capacity;
+		}
+
+		T* assing_data = v_allocator.allocate(new_capacity);
+
+		size_t constructred = 0;
+		try
+		{
+			for (constructred = 0; constructred < count; constructred++)
+			{
+				AllocTraits::construct(v_allocator, assing_data + constructred, value);
+			}
+		}
+		catch (...)
+		{
+			destroy_elements(assing_data, constructred);
+			deallocate_data( assing_data, new_capacity);
+			throw;
 		}
 
 		destroy_elements();
-		v_size = 0;
+		deallocate_data();
 
-		for (size_t i = 0; i < count; i++)
-		{
-			AllocTraits::construct(v_allocator, &v_data[i], value);
-			++v_size;
-		}
+		v_data = assing_data;
+		v_capacity = new_capacity;
+		v_size = count;
+
 	}
 	/// <summary>
 	/// Назначает новые значения элементам вектора.
@@ -909,20 +1168,8 @@ public:
 		std::enable_if_t<!std::is_integral_v<InputIt>, int> = 0>
 	void assign(InputIt first, InputIt last)
 	{
-		size_t count = distance(first, last);
-
-		if (count > v_capacity)
-		{
-			reserve(count);
-		}
-		
-		destroy_elements();
-		v_size = 0;
-		
-		for (auto it = first; it != last; ++it)
-		{
-			AllocTraits::construct(v_allocator, &v_data[v_size++], *it);
-		}
+		Vector temp(first, last);
+		swap(temp);
 	}
 	/// <summary>
 	/// Назначает новые значения элементам вектора.

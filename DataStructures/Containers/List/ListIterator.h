@@ -60,7 +60,7 @@ public:
 	/// </summary>
 	/// <param name=""></param>
 	/// <returns>Ссылка на измененный итератор.</returns>
-	ListIterator& operator++(int)
+	ListIterator operator++(int)
 	{
 		ListIterator temp = *this;
 		++(*this);
@@ -80,7 +80,7 @@ public:
 	/// </summary>
 	/// <param name=""></param>
 	/// <returns>Ссылка на измененный итератор.</returns>
-	ListIterator& operator--(int)
+	ListIterator operator--(int)
 	{
 		ListIterator temp = *this;
 		--(*this);

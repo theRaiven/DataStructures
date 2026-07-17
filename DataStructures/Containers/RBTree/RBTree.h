@@ -131,7 +131,7 @@ public:
         NodeRBT<T>* new_node = new NodeRBT<T>(value);
         if (!bst_insert(new_node))
         {
-            //delete new_node;
+            delete new_node;
             return;
         }
         insert_fixup(new_node);
@@ -659,7 +659,6 @@ private:
             }
             else if (new_node->data == current->data)
             {
-                delete new_node;
 				return false;
             }
             else
