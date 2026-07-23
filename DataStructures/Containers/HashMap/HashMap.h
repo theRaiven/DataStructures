@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <list>
 #include <utility>
 #include <cmath>
 #include <stdexcept>
@@ -18,7 +19,9 @@
 template<class Key,	class Value, class Hash = std::hash<Key>, class KeyEqual = std::equal_to<Key>>
 class HashMapChaining : public IHashTable<Key, Value>
 {
-	using Bucket = std::vector<std::pair<Key, Value>>;
+	using ValueType = std::pair<const Key, Value>;
+	using Bucket = std::list<ValueType>;
+
 	using iterator = HashTableIterator<Key, Value, Hash, KeyEqual>;
 
 	friend class HashTableIterator<Key, Value, Hash, KeyEqual>;
@@ -137,7 +140,7 @@ public:
 			for (const auto& data : bucket)
 			{
 				size_t new_index = hash_(data.first) % new_bucket_count;
-				new_buckets[new_index].emplace_back(data);
+				new_buckets[new_index].emplace_back(data.first,	data.second);
 			}
 		}
 

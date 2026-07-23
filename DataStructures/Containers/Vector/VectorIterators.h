@@ -10,14 +10,14 @@ class Vector;
 /// <typeparam name="Reference"> Тип ссылки </typeparam>
 /// <typeparam name="Derived"> Тип производного класса </typeparam>
 template<typename Pointer, typename Reference, typename Derived, typename T>
-class base_iterator
+class base_iterator_vector
 {
 	friend class Vector<T>;
 protected:
 	Pointer ptr;
 
 public:
-	explicit base_iterator(Pointer ptr = nullptr) : ptr(ptr) {}
+	explicit base_iterator_vector(Pointer ptr = nullptr) : ptr(ptr) {}
 
 	/// <summary>
 	/// Разыменование итератора.
@@ -62,14 +62,57 @@ public:
 	/// </summary>
 	/// <param name="i">Целое число</param>
 	/// <returns>Итератор, смещенный на i позиций</returns>
-	Derived& operator+(int i)
+	Derived& operator+(std::ptrdiff_t offset) const
+	{
+		Derived result = static_cast<const Derived&>(*this);
+
+		if (result.ptr)
+		{
+			result.ptr += offset;
+		}
+
+		return result;
+	}
+	/// <summary>
+	/// Вычитание итератора с целым числом.
+	/// </summary>
+	/// <param name="i">Целое число</param>
+	/// <returns>Итератор, смещенный на i позиций</returns>
+	Derived& operator-(std::ptrdiff_t offset) const
+	{
+		Derived result = static_cast<const Derived&>(*this);
+
+		if (result.ptr)
+		{
+			result.ptr -= offset;
+		}
+
+		return result;
+	}
+	/// <summary>
+	/// Сложение с присвоением итератора с целым числом.
+	/// </summary>
+	/// <param name="i">Целое число</param>
+	/// <returns>Итератор, смещенный на i позиций</returns>
+	Derived& operator+=(std::ptrdiff_t offset)
 	{
 		if (ptr)
 		{
-			for (int j = 0; j < i; j++)
-			{
-				++ptr;
-			}
+			ptr += offset;
+		}
+
+		return static_cast<Derived&>(*this);
+	}
+	/// <summary>
+	/// Вычитание с присвоением итератора с целым числом.
+	/// </summary>
+	/// <param name="i">Целое число</param>
+	/// <returns>Итератор, смещенный на i позиций</returns>
+	Derived& operator-=(std::ptrdiff_t offset)
+	{
+		if (ptr)
+		{
+			ptr -= offset;
 		}
 
 		return static_cast<Derived&>(*this);
@@ -119,19 +162,19 @@ public:
 /// Класс iterator представляет собой итератор для вектора.
 /// </summary>
 template <typename T>
-class VectorIterator : public base_iterator<T*, T&, VectorIterator<T>, T>
+class VectorIterator : public base_iterator_vector<T*, T&, VectorIterator<T>, T>
 {
 public:
-	using base_iterator<T*, T&, VectorIterator<T>, T>::base_iterator;
+	using base_iterator_vector<T*, T&, VectorIterator<T>, T>::base_iterator_vector;
 };
 /// <summary>
 /// Класс const_iterator представляет собой константный итератор для вектора.
 /// </summary>
 template <typename T>
-class VectorConstIterator : public base_iterator<const T*, const T&, VectorConstIterator<T>, T>
+class VectorConstIterator : public base_iterator_vector<const T*, const T&, VectorConstIterator<T>, T>
 {
 public:
-	using base_iterator<const T*, const T&, VectorConstIterator<T>, T>::base_iterator;
+	using base_iterator_vector<const T*, const T&, VectorConstIterator<T>, T>::base_iterator_vector;
 
-	VectorConstIterator(const VectorIterator<T>& it) : base_iterator<const T*, const T&, VectorConstIterator<T>, T>(it.ptr) {}
+	VectorConstIterator(const VectorIterator<T>& it) : base_iterator_vector<const T*, const T&, VectorConstIterator<T>, T>(it.ptr) {}
 };

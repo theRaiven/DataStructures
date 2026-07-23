@@ -16,6 +16,7 @@ private:
 	size_t list_size;
 
 	using iterator = ListIterator<T>;
+	using const_iterator = ListConstIterator<T>;
 
 	/// <summary>
 	/// ќбъедин€ет два отсортированных списка в один отсортированный результат.
@@ -412,7 +413,7 @@ public:
 	/// ¬озвращает итератор, указывающий на начало контейнера.
 	/// </summary>
 	/// <returns>»тератор, инициализированный значением head, указывающий на первый элемент списка.</returns>
-	iterator begin()
+	iterator begin() noexcept
 	{
 		return iterator(head);
 	}
@@ -420,7 +421,7 @@ public:
 	/// ¬озвращает итератор, указывающий на позицию после последнего элемента.
 	/// </summary>
 	/// <returns>»тератор, созданный с nullptr, обозначающий конец последовательности.</returns>
-	iterator end()
+	iterator end() noexcept
 	{
 		return iterator(nullptr);
 	}
@@ -428,17 +429,31 @@ public:
 	/// ¬озвращает итератор, указывающий на начало контейнера.
 	/// </summary>
 	/// <returns>»тератор, инициализированный значением head, указывающий на первый элемент списка.</returns>
-	iterator begin() const
+	const_iterator begin() const noexcept
 	{
-		return iterator(head);
+		return const_iterator(head);
 	}
 	/// <summary>
 	/// ¬озвращает итератор, указывающий на позицию после последнего элемента.
 	/// </summary>
 	/// <returns>»тератор, созданный с nullptr, обозначающий конец последовательности.</returns>
-	iterator end() const
+	const_iterator end() const noexcept
 	{
-		return iterator(nullptr);
+		return const_iterator(nullptr);
+	}
+	/// <summary>
+	/// ¬озвращает константный итератор на первый элемент списка.
+	/// </summary>
+	const_iterator cbegin() const noexcept
+	{
+		return const_iterator(head);
+	}
+	/// <summary>
+	/// ¬озвращает константный итератор на позицию после последнего элемента.
+	/// </summary>
+	const_iterator cend() const noexcept
+	{
+		return const_iterator(nullptr);
 	}
 
 	/// <summary>

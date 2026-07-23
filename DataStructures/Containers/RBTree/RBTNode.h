@@ -22,13 +22,5 @@ struct NodeRBT
 	NodeRBT* parent;
 
 	NodeRBT(const T& value) : data(value), left(nullptr), right(nullptr), parent(nullptr), color(Color::RED) {}
-	~NodeRBT()
-	{
-		left = nullptr;
-		right = nullptr;
-		parent = nullptr;
-		delete left;
-		delete right;
-		delete parent;
-	}
+	~NodeRBT() = default;
 };

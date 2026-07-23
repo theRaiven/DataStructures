@@ -2,18 +2,13 @@
 #include "IHashTable.h"
 #include <stdexcept>
 
-template<class Key,
-	class Value,
-	class Hash,
-	class KeyEqual>
+template<class Key,	class Value, class Hash, class KeyEqual>
 class HashMapChaining;
 
 /// <summary>
 /// Итератор для хеш-таблицы с цепочками.
 /// </summary>
-template <class Key, class Value,
-	class Hash,
-	class KeyEqual>
+template <class Key, class Value, class Hash, class KeyEqual>
 class HashTableIterator
 {
 	friend class HashMapChaining<Key, Value, Hash, KeyEqual>;
@@ -38,18 +33,36 @@ public:
 		if (map_) skip_empty();
 	}
 
-	std::pair<Key, Value>& operator*()
+	std::pair<const Key, Value>& operator*()
 	{
 		if (!map_ || bucket_idx_ >= map_->buckets_.size())
-			throw std::runtime_error("Dereferencing invalid iterator");
-		return map_->buckets_[bucket_idx_][elem_idx_];
+		{
+			throw std::runtime_error(
+				"Dereferencing invalid iterator");
+		}
+
+		auto& bucket = map_->buckets_[bucket_idx_];
+
+		auto it = bucket.begin();
+		std::advance(it, elem_idx_);
+
+		return *it;
 	}
 
-	const std::pair<Key, Value>& operator*() const
+	const std::pair<const Key, Value>& operator*() const
 	{
 		if (!map_ || bucket_idx_ >= map_->buckets_.size())
-			throw std::runtime_error("Dereferencing invalid iterator");
-		return map_->buckets_[bucket_idx_][elem_idx_];
+		{
+			throw std::runtime_error(
+				"Dereferencing invalid iterator");
+		}
+
+		const auto& bucket = map_->buckets_[bucket_idx_];
+
+		auto it = bucket.cbegin();
+		std::advance(it, elem_idx_);
+
+		return *it;
 	}
 
 	HashTableIterator& operator++()

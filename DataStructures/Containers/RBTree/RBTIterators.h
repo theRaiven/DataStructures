@@ -154,9 +154,9 @@ class RBTconst_iterator : public iterator_base<T>
 {
     friend class RBTree<T>;
 public:
-    RBTconst_iterator(NodeRBT<T>* n, NodeRBT<T>* r) : iterator_base(n, r) {}
+    RBTconst_iterator(NodeRBT<T>* n, NodeRBT<T>* r) : iterator_base<T>(n, r) {}
     RBTconst_iterator() = default;
-    RBTconst_iterator(const RBTiterator<T>& it) : iterator_base(it.node, it.root) {}
+    RBTconst_iterator(const RBTiterator<T>& it) : iterator_base<T>(it.node, it.root) {}
 
     const T& operator*() const
     {

@@ -33,4 +33,6 @@ public:
 	/// </summary>
 	/// <returns> Возаращает количество элементов в хеш-таблице типа size_t. </returns>
 	virtual size_t size() const = 0;
+
+	virtual ~IHashTable() = default;
 };
