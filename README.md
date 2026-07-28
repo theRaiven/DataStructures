@@ -8,8 +8,8 @@
 производительности собственных контейнеров с аналогами из стандартной библиотеки C++.
 
 Состояние проекта: проект находится в разработке. 
-  Реализованы Vector, List, RBTree и хеш-таблица с методом цепочек. 
-  Хеш-таблица с открытой адресацией пока не завершена.
+  Реализованы Vector, List, RBTree, хеш-таблица с методом цепочек и
+  хеш-таблица с открытой адресацией.
 
 Реализованные структуры данных:
 Vector<T>
@@ -30,11 +30,11 @@ HashMapChaining<Key, Value>
   и сравнения ключей, вставка, поиск и удаление элементов, итераторы, управление коэффициентом заполнения, 
   а также операции reserve и rehash.
 
-В разработке
-Хеш-таблица с открытой адресацией
-  На текущем этапе реализуется хранение состояний ячеек и базовая структура контейнера. Будет добавляться
-  пробирование, обработку удалённых элементов, изменение размера таблицы и разрешение коллизий без использования
-  связанных списков.
+HashMapOpenAddressing<int, int>
+  Хеш-таблица с открытой адресацией и линейным пробированием. Для ячеек предусмотрены состояния 
+  Empty, Occupied и Deleted. Поддерживаются вставка, обновление, поиск и удаление элементов, повторное       
+  использование удалённых ячеек, автоматическое изменение размера таблицы, а также операции reserve и rehash. 
+  Коллизии разрешаются без использования связанных списков.
 
 
 Тестирование
@@ -44,6 +44,7 @@ HashMapChaining<Key, Value>
 - TestsForList;
 - TestsForRBTree;
 - TestsForHashTableChaining.
+- TestsForHashMapOpenAddressing
 
 Тесты проверяют:
 - конструкторы;
@@ -62,11 +63,12 @@ HashMapChaining<Key, Value>
 Исполняемый проект содержит простой набор тестов производительности, который сравнивает
 пользовательские контейнеры с аналогами из STL:
 
-Пользовательская структура  |   Аналог из STL 
-Vector<int>                 |   std::vector<int> 
-List<int>                   |   std::list<int> 
-RBTree<int>                 |   std::set<int> 
-HashMapChaining<int, int>   |   std::unordered_map<int, int> 
+Пользовательская структура      |   Аналог из STL 
+Vector<int>                     |   std::vector<int> 
+List<int>                       |   std::list<int> 
+RBTree<int>                     |   std::set<int> 
+HashMapChaining<int, int>       |   std::unordered_map<int, int> 
+HashMapOpenAddressing<int, int> |   std::unordered_map<int, int> 
 
 Текущая функция main запускает группы операций для 100 000 элементов.
 
@@ -81,6 +83,8 @@ HashMapChaining<int, int>   |   std::unordered_map<int, int>
 │   │   └── BenchmarkDSAndSTL.h
 │   ├── Containers/
 │   │   ├── HashMap/
+│   │   │   ├── HashMapChaining/
+│   │   │   └── HashMapOpenAddressing/
 │   │   ├── List/
 │   │   ├── RBTree/
 │   │   └── Vector/
