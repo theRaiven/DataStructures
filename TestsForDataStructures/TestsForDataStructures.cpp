@@ -3,11 +3,13 @@
 #include "../DataStructures/Containers/List/List.h"
 #include "../DataStructures/Containers/RBTree/RBTree.h"
 #include "../DataStructures/Containers/Vector/Vector.h"
-#include "../DataStructures/Containers/HashMap/HashMap.h"
+#include "../DataStructures/Containers/HashMap/HashMapChaining/HashMapChaining.h"
+#include "../DataStructures/Containers/HashMap/HashMapOpenAddressing/HashMapOpenAddressing.h"
 #include <random>
+#include <unordered_map>
 #include <set>
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
-
+using namespace ds;
 namespace TestsForDataStructures
 {
 	TEST_CLASS(TestsForList)
@@ -809,6 +811,284 @@ namespace TestsForDataStructures
 					--it;
 				});
 		}
+	};
+	TEST_CLASS(TestsForHashMapOpenAddressing)
+	{
+		struct ConstantHash
+		{
+			std::size_t operator()(int) const noexcept
+			{
+				return 0;
+			}
+		};
+
+		TEST_METHOD(EmptyMap)
+		{
+			HashMapOpenAddressing<int, std::string> table;
+
+			Assert::AreEqual(static_cast<std::size_t>(0), table.size());
+			Assert::AreEqual(0.0f, table.load_factor(), 0.0001f);
+			Assert::AreEqual(0.0f, table.occupancy_factor(), 0.0001f);
+
+			std::string value = "unchanged";
+
+			Assert::IsFalse(table.find(10, value));
+			Assert::AreEqual(std::string("unchanged"), value);
+			Assert::IsFalse(table.erase(10));
+		}
+
+		TEST_METHOD(InsertAndFind)
+		{
+			HashMapOpenAddressing<int, std::string> table;
+
+			table.emplace(1, "one");
+			table.emplace(2, "two");
+			table.emplace(3, "three");
+
+			Assert::AreEqual(static_cast<std::size_t>(3), table.size());
+
+			std::string value;
+
+			Assert::IsTrue(table.find(1, value));
+			Assert::AreEqual(std::string("one"), value);
+
+			Assert::IsTrue(table.find(2, value));
+			Assert::AreEqual(std::string("two"), value);
+
+			Assert::IsTrue(table.find(3, value));
+			Assert::AreEqual(std::string("three"), value);
+
+			Assert::IsFalse(table.find(4, value));
+		}
+
+		TEST_METHOD(EmplaceExistingKeyUpdatesValue)
+		{
+			HashMapOpenAddressing<int, std::string> table;
+
+			table.emplace(5, "old");
+			table.emplace(5, "new");
+
+			Assert::AreEqual(static_cast<std::size_t>(1), table.size());
+
+			std::string value;
+
+			Assert::IsTrue(table.find(5, value));
+			Assert::AreEqual(std::string("new"), value);
+		}
+
+		TEST_METHOD(FindMissingKeyDoesNotChangeOutputValue)
+		{
+			HashMapOpenAddressing<int, int> table;
+
+			table.emplace(1, 100);
+
+			int value = 777;
+
+			Assert::IsFalse(table.find(2, value));
+			Assert::AreEqual(777, value);
+		}
+
+		TEST_METHOD(EraseExistingAndMissingKey)
+		{
+			HashMapOpenAddressing<int, int> table;
+
+			table.emplace(1, 10);
+			table.emplace(2, 20);
+
+			Assert::IsTrue(table.erase(1));
+			Assert::AreEqual(static_cast<std::size_t>(1), table.size());
+
+			int value = -1;
+
+			Assert::IsFalse(table.find(1, value));
+
+			Assert::IsTrue(table.find(2, value));
+			Assert::AreEqual(20, value);
+
+			Assert::IsFalse(table.erase(1));
+			Assert::AreEqual(static_cast<std::size_t>(1), table.size());
+		}
+
+		TEST_METHOD(ConstructorWithZeroCapacityStillWorks)
+		{
+			HashMapOpenAddressing<int, int> table(0);
+
+			table.emplace(1, 100);
+
+			int value = -1;
+
+			Assert::IsTrue(table.find(1, value));
+			Assert::AreEqual(100, value);
+			Assert::AreEqual(static_cast<std::size_t>(1), table.size());
+		}
+
+		TEST_METHOD(CollisionManyKeysFindAndErase)
+		{
+			HashMapOpenAddressing<int, int, ConstantHash> table;
+
+			for (int i = 0; i < 100; ++i)
+			{
+				table.emplace(i, i * 10);
+			}
+
+			Assert::AreEqual(static_cast<std::size_t>(100), table.size());
+
+			for (int i = 0; i < 100; ++i)
+			{
+				int value = -1;
+
+				Assert::IsTrue(table.find(i, value));
+				Assert::AreEqual(i * 10, value);
+			}
+
+			Assert::IsTrue(table.erase(0));
+			Assert::IsTrue(table.erase(50));
+			Assert::IsTrue(table.erase(99));
+
+			Assert::AreEqual(static_cast<std::size_t>(97), table.size());
+
+			int value = -1;
+
+			Assert::IsFalse(table.find(0, value));
+			Assert::IsFalse(table.find(50, value));
+			Assert::IsFalse(table.find(99, value));
+
+			for (int i = 1; i < 99; ++i)
+			{
+				if (i == 50)
+				{
+					continue;
+				}
+
+				Assert::IsTrue(table.find(i, value));
+				Assert::AreEqual(i * 10, value);
+			}
+		}
+
+		TEST_METHOD(EraseMiddleOfCollisionChainDoesNotBreakSearch)
+		{
+			HashMapOpenAddressing<int, int, ConstantHash> table(8);
+
+			table.emplace(10, 100);
+			table.emplace(20, 200);
+			table.emplace(30, 300);
+
+			Assert::IsTrue(table.erase(20));
+
+			int value = -1;
+
+			// Ключ 30 лежит после удалённой ячейки.
+			Assert::IsTrue(table.find(30, value));
+			Assert::AreEqual(300, value);
+
+			Assert::IsTrue(table.find(10, value));
+			Assert::AreEqual(100, value);
+		}
+
+		TEST_METHOD(DeletedSlotIsReused)
+		{
+			HashMapOpenAddressing<int, int, ConstantHash> table(8);
+
+			table.emplace(1, 10);
+			table.emplace(2, 20);
+			table.emplace(3, 30);
+
+			Assert::AreEqual(0.375f, table.occupancy_factor(), 0.0001f);
+
+			Assert::IsTrue(table.erase(2));
+
+			// Два Occupied и одна Deleted: физически заняты три ячейки.
+			Assert::AreEqual(0.250f, table.load_factor(), 0.0001f);
+			Assert::AreEqual(0.375f, table.occupancy_factor(), 0.0001f);
+
+			table.emplace(4, 40);
+
+			// Deleted была повторно использована:
+			// size увеличился, deleted_count уменьшился.
+			Assert::AreEqual(static_cast<std::size_t>(3), table.size());
+			Assert::AreEqual(0.375f, table.load_factor(), 0.0001f);
+			Assert::AreEqual(0.375f, table.occupancy_factor(), 0.0001f);
+
+			int value = -1;
+
+			Assert::IsTrue(table.find(4, value));
+			Assert::AreEqual(40, value);
+		}
+
+		TEST_METHOD(AutomaticRehashPreservesAllElements)
+		{
+			HashMapOpenAddressing<int, int> table(2);
+
+			for (int i = 0; i < 500; ++i)
+			{
+				table.emplace(i, i * 100);
+			}
+
+			Assert::AreEqual(static_cast<std::size_t>(500), table.size());
+			Assert::IsTrue(table.load_factor() <= 0.7f);
+
+			for (int i = 0; i < 500; ++i)
+			{
+				int value = -1;
+
+				Assert::IsTrue(table.find(i, value));
+				Assert::AreEqual(i * 100, value);
+			}
+		}
+
+		TEST_METHOD(RehashSameCapacityRemovesDeletedSlots)
+		{
+			HashMapOpenAddressing<int, int, ConstantHash> table(8);
+
+			table.emplace(1, 10);
+			table.emplace(2, 20);
+			table.emplace(3, 30);
+
+			Assert::IsTrue(table.erase(2));
+
+			Assert::AreEqual(0.250f, table.load_factor(), 0.0001f);
+			Assert::AreEqual(0.375f, table.occupancy_factor(), 0.0001f);
+
+			table.rehash(8);
+
+			// После перестройки Deleted исчезает.
+			Assert::AreEqual(0.250f, table.load_factor(), 0.0001f);
+			Assert::AreEqual(0.250f, table.occupancy_factor(), 0.0001f);
+
+			int value = -1;
+
+			Assert::IsTrue(table.find(1, value));
+			Assert::AreEqual(10, value);
+
+			Assert::IsFalse(table.find(2, value));
+
+			Assert::IsTrue(table.find(3, value));
+			Assert::AreEqual(30, value);
+		}
+
+		TEST_METHOD(ReserveDoesNotBreakInsertionAndFind)
+		{
+			HashMapOpenAddressing<int, int> table(2);
+
+			table.reserve(200);
+
+			for (int i = 0; i < 200; ++i)
+			{
+				table.emplace(i, i + 1);
+			}
+
+			Assert::AreEqual(static_cast<std::size_t>(200), table.size());
+			Assert::IsTrue(table.load_factor() <= 0.7f);
+
+			for (int i = 0; i < 200; ++i)
+			{
+				int value = -1;
+
+				Assert::IsTrue(table.find(i, value));
+				Assert::AreEqual(i + 1, value);
+			}
+		}
+
 	};
 	TEST_CLASS(TestsForVector)
 	{

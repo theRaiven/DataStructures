@@ -50,7 +50,10 @@
     <ClInclude Include="Containers\HashMap\IHashTable.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="Containers\HashMap\HashTableIterator.h">
+    <ClInclude Include="Containers\HashMap\HashMapChaining\HashTableIterator.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="Containers\HashMap\HashMapOpenAddressing\HashMapOpenAddressing.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
   </ItemGroup>

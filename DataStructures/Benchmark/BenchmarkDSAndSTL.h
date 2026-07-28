@@ -1,7 +1,14 @@
 #pragma once
+
+#include <iomanip>  
+#include <string>   
+#include <iostream> 
 #include <chrono>
 #include <random>
 #include <set>
+#include <algorithm>
+#include <unordered_map>
+#include <vector>
 using namespace std;
 using Clock = chrono::high_resolution_clock;
 
@@ -1069,5 +1076,340 @@ private:
 		cout << name << ":\n";
 		cout << "  MyVector = " << my << " micro s\n";
 		cout << "  std::vector= " << stl << " micro s\n\n";
+	}
+};
+
+template<typename MyMap, typename StdMap>
+class OpenAddressingMapBenchmark : public BenchmarkPrinter
+{
+private:
+	std::size_t n_;
+	std::vector<int> keys_;
+
+public:
+	explicit OpenAddressingMapBenchmark(std::size_t n)
+		: n_(n), keys_(n)
+	{
+		// В таблицу вставляем только нечётные ключи.
+		// Чётные ключи потом используем для неуспешного поиска.
+		for (std::size_t i = 0; i < n_; ++i)
+		{
+			keys_[i] = static_cast<int>(i * 2 + 1);
+		}
+
+		std::mt19937 generator(42);
+		std::shuffle(keys_.begin(), keys_.end(), generator);
+	}
+
+	std::string my_container_name() const override
+	{
+		return "MyOpenMap";
+	}
+
+	std::string std_container_name() const override
+	{
+		return "unordered_map";
+	}
+
+	void run_all()
+	{
+		print_header();
+
+		run("emplace",
+			[&] { return my_emplace(false); },
+			[&] { return std_emplace(false); });
+
+		run("emplace_reserved",
+			[&] { return my_emplace(true); },
+			[&] { return std_emplace(true); });
+
+		run("update_existing",
+			[&] { return my_update_existing(); },
+			[&] { return std_update_existing(); });
+
+		run("find_existing",
+			[&] { return my_find_existing(); },
+			[&] { return std_find_existing(); });
+
+		run("find_missing",
+			[&] { return my_find_missing(); },
+			[&] { return std_find_missing(); });
+
+		run("erase_random",
+			[&] { return my_erase_random(); },
+			[&] { return std_erase_random(); });
+
+		print_footer();
+	}
+
+private:
+	template<typename F1, typename F2>
+	void run(const std::string& name, F1 my_operation, F2 std_operation)
+	{
+		long long my_time = my_operation();
+		long long std_time = std_operation();
+
+		print_row(name, my_time, std_time);
+	}
+
+	template<typename Func>
+	long long benchmark(Func&& operation)
+	{
+		auto start = Clock::now();
+
+		operation();
+
+		auto end = Clock::now();
+
+		return std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+	}
+
+	long long my_emplace(bool use_reserve)
+	{
+		MyMap map;
+
+		if (use_reserve)
+		{
+			map.reserve(n_);
+		}
+
+		long long time = benchmark([&]
+			{
+				for (std::size_t i = 0; i < n_; ++i)
+				{
+					map.emplace(keys_[i], static_cast<int>(i));
+				}
+			});
+
+		// Не даём оптимизатору полностью удалить работу с контейнером.
+		volatile std::size_t result_size = map.size();
+		(void)result_size;
+
+		return time;
+	}
+
+	long long std_emplace(bool use_reserve)
+	{
+		StdMap map;
+
+		map.max_load_factor(0.7f);
+
+		if (use_reserve)
+		{
+			map.reserve(n_);
+		}
+
+		long long time = benchmark([&]
+			{
+				for (std::size_t i = 0; i < n_; ++i)
+				{
+					map.emplace(keys_[i], static_cast<int>(i));
+				}
+			});
+
+		volatile std::size_t result_size = map.size();
+		(void)result_size;
+
+		return time;
+	}
+
+	long long my_update_existing()
+	{
+		MyMap map;
+		map.reserve(n_);
+
+		for (std::size_t i = 0; i < n_; ++i)
+		{
+			map.emplace(keys_[i], static_cast<int>(i));
+		}
+
+		return benchmark([&]
+			{
+				for (std::size_t i = 0; i < n_; ++i)
+				{
+					map.emplace(keys_[i], static_cast<int>(i + 1));
+				}
+			});
+	}
+
+	long long std_update_existing()
+	{
+		StdMap map;
+		map.max_load_factor(0.7f);
+		map.reserve(n_);
+
+		for (std::size_t i = 0; i < n_; ++i)
+		{
+			map.emplace(keys_[i], static_cast<int>(i));
+		}
+
+		return benchmark([&]
+			{
+				for (std::size_t i = 0; i < n_; ++i)
+				{
+					map.insert_or_assign(
+						keys_[i],
+						static_cast<int>(i + 1));
+				}
+			});
+	}
+
+	long long my_find_existing()
+	{
+		MyMap map;
+		map.reserve(n_);
+
+		for (std::size_t i = 0; i < n_; ++i)
+		{
+			map.emplace(keys_[i], static_cast<int>(i));
+		}
+
+		volatile std::size_t checksum = 0;
+
+		return benchmark([&]
+			{
+				int value = 0;
+
+				for (int key : keys_)
+				{
+					if (map.find(key, value))
+					{
+						checksum += static_cast<std::size_t>(value);
+					}
+				}
+			});
+	}
+
+	long long std_find_existing()
+	{
+		StdMap map;
+		map.max_load_factor(0.7f);
+		map.reserve(n_);
+
+		for (std::size_t i = 0; i < n_; ++i)
+		{
+			map.emplace(keys_[i], static_cast<int>(i));
+		}
+
+		volatile std::size_t checksum = 0;
+
+		return benchmark([&]
+			{
+				for (int key : keys_)
+				{
+					auto iterator = map.find(key);
+
+					if (iterator != map.end())
+					{
+						checksum +=
+							static_cast<std::size_t>(iterator->second);
+					}
+				}
+			});
+	}
+
+	long long my_find_missing()
+	{
+		MyMap map;
+		map.reserve(n_);
+
+		for (std::size_t i = 0; i < n_; ++i)
+		{
+			map.emplace(keys_[i], static_cast<int>(i));
+		}
+
+		volatile std::size_t found_count = 0;
+
+		return benchmark([&]
+			{
+				int value = 0;
+
+				for (std::size_t i = 0; i < n_; ++i)
+				{
+					// В таблице находятся только нечётные ключи.
+					int missing_key = static_cast<int>(i * 2);
+
+					if (map.find(missing_key, value))
+					{
+						++found_count;
+					}
+				}
+			});
+	}
+
+	long long std_find_missing()
+	{
+		StdMap map;
+		map.max_load_factor(0.7f);
+		map.reserve(n_);
+
+		for (std::size_t i = 0; i < n_; ++i)
+		{
+			map.emplace(keys_[i], static_cast<int>(i));
+		}
+
+		volatile std::size_t found_count = 0;
+
+		return benchmark([&]
+			{
+				for (std::size_t i = 0; i < n_; ++i)
+				{
+					int missing_key = static_cast<int>(i * 2);
+
+					if (map.find(missing_key) != map.end())
+					{
+						++found_count;
+					}
+				}
+			});
+	}
+
+	long long my_erase_random()
+	{
+		MyMap map;
+		map.reserve(n_);
+
+		for (std::size_t i = 0; i < n_; ++i)
+		{
+			map.emplace(keys_[i], static_cast<int>(i));
+		}
+
+		long long time = benchmark([&]
+			{
+				for (int key : keys_)
+				{
+					map.erase(key);
+				}
+			});
+
+		volatile std::size_t result_size = map.size();
+		(void)result_size;
+
+		return time;
+	}
+
+	long long std_erase_random()
+	{
+		StdMap map;
+		map.max_load_factor(0.7f);
+		map.reserve(n_);
+
+		for (std::size_t i = 0; i < n_; ++i)
+		{
+			map.emplace(keys_[i], static_cast<int>(i));
+		}
+
+		long long time = benchmark([&]
+			{
+				for (int key : keys_)
+				{
+					map.erase(key);
+				}
+			});
+
+		volatile std::size_t result_size = map.size();
+		(void)result_size;
+
+		return time;
 	}
 };
